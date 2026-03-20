@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data files (download locally, don't commit)
+data/*.csv
+data/*.zip
+data/*.txt
+!data/.gitkeep
+
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
