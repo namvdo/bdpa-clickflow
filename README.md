@@ -1,82 +1,134 @@
-# BDPA Clickflow
+# Clickstream Analysis for Online Shopping — Big Data Project
 
-**Analysing Clickstream Data for Online Shopping** — Big Data Processing course project.
-
-We analyse the [UCI Clickstream Dataset](https://archive.ics.uci.edu/dataset/553/clickstream+data+for+online+shopping) (165K sessions, 14 features) from an online maternity-clothing store using PySpark.
+> Master's course project — Big Data (University of Oulu)
+> Tools: PySpark, Spark MLlib, Docker, Streamlit
 
 ---
 
-## Quick Start
+## Project Overview
 
-> **Prerequisites:** Python 3.10–3.12 (PySpark doesn't support 3.13+), Java 11+
+This project analyzes clickstream data from an online clothing store using a Big Data pipeline built on Apache Spark. We process raw user click logs, engineer session-level features, and apply machine learning to understand and predict user behavior. A recommender system surfaces product suggestions from browsing patterns and a shared Streamlit app presents all findings interactively.
+
+**Dataset:** [Clickstream Data for Online Shopping — UCI ML Repository](https://archive.ics.uci.edu/dataset/553/clickstream+data+for+online+shopping)
+
+- 165,474 click records | 14 features | No missing values
+- 5 months of data (April–August 2008)
+- Clothing store for pregnant women | Country-level IP data included
+
+---
+
+## Architecture
+
+```
+Raw CSV (UCI Dataset)
+        │
+        ▼
+Task 1 — Spark Ingestion & Pipeline
+  └── Clean → Sessionize → Feature Engineering → Parquet output
+        │
+        ├──▶ Task 2 — EDA & Business Insights (PySpark SQL + Matplotlib)
+        │
+        ├──▶ Task 3 — ML & Behavior Prediction (Spark MLlib)
+        │
+        └──▶ Task 4 — Recommender System (Spark MLlib ALS)
+                │
+                ▼
+        Shared Streamlit App (app/)
+```
+
+---
+
+## Task Division
+
+| Task | Description | Owner |
+|------|-------------|-------|
+| Task 1 | Data Engineering & Spark Pipeline | Sajjad Ghaeminejad |
+| Task 2 | Exploratory Analysis & Business Insights | TBD |
+| Task 3 | ML & Behavior Prediction | TBD |
+| Task 4 | Recommender System | TBD |
+| Shared | Streamlit Integration App | Sajjad Ghaeminejad |
+
+---
+
+## Repo Structure
+
+```
+clickstream-bigdata-project/
+│
+├── README.md                   # This file !
+├── docker-compose.yml          # Spin up Spark environment
+├── requirements.txt            # Requirements! => python dependencies
+│
+├── data/                       #
+│
+├── docs/                       # Project documentation
+│   ├── project_idea.pdf
+│   └── architecture.png
+│
+├── task1_pipeline/             # Data Engineering & Spark Pipeline
+├── task2_eda/                  # Exploratory Analysis & Business Insights
+├── task3_ml/                   # ML & Behavior Prediction
+├── task4_recommender/          # Recommender System
+│
+└── app/                        # Shared Streamlit App
+```
+
+---
+
+## Getting Started
+
+### 1. Clone the repo
 
 ```bash
-# 1. Clone & enter the repo
-git clone <repo-url> && cd bdpa-clickflow
+git clone <https://github.com/namvdo/bdpa-clickflow>
+cd bdpa-clickflow
+```
 
-# 2. Create a virtual environment (use python3.12 specifically)
-python3.12 -m venv venv
-source venv/bin/activate        # macOS / Linux
-# venv\Scripts\activate         # Windows
+### 2. Download the dataset
 
-# 3. Install dependencies
+Follow the instructions in [`data/README.md`](data/README.md) to download and place the dataset.
+
+### 3. Start the environment
+
+```bash
+docker-compose up
+```
+
+This spins up a Spark environment accessible to all tasks.
+
+### 4. Install Python dependencies
+
+```bash
 pip install -r requirements.txt
-
-# 4. Download the dataset
-python scripts/download_data.py
-
-# 5. Start Jupyter (optional)
-jupyter notebook
 ```
 
-To verify PySpark works:
+### 5. Run the Streamlit app
 
-```python
-from pyspark.sql import SparkSession
-
-spark = SparkSession.builder.appName("clickflow").getOrCreate()
-df = spark.read.csv("data/e-shop clothing 2008.csv", header=True, inferSchema=True, sep=";")
-df.printSchema()
-df.show(5)
-spark.stop()
+```bash
+streamlit run app/main.py
 ```
 
 ---
 
-## Project Structure
+## Tech Stack
 
-```
-bdpa-clickflow/
-├── data/               # Dataset files (git-ignored, download locally)
-├── notebooks/          # Jupyter notebooks for exploration & analysis
-├── scripts/
-│   └── download_data.py
-├── src/                # Shared Python modules
-├── requirements.txt
-└── README.md
-```
-
-- **`data/`** — Not committed to git. Each person downloads via the script.
-- **`notebooks/`** — Individual exploration notebooks.
-- **`src/`** — Shared helper code (cleaning functions, Spark utilities, etc.).
-- **`scripts/`** — Automation scripts.
+to be added!
 
 ---
 
-## Dataset Info
-
-| Field | Details |
-|-------|---------|
-| Source | [UCI ML Repository #553](https://archive.ics.uci.edu/dataset/553/clickstream+data+for+online+shopping) |
-| Instances | 165,474 |
-| Features | 14 (year, month, day, order, country, session ID, page, page 2, colour, location, model photography, price, price 2, page) |
-| Format | CSV (semicolon `;` separated) |
-| License | CC BY 4.0 |
-
----
-## Citation
+## Dataset Citation
 
 ```
 Clickstream Data for Online Shopping [Dataset]. (2019).
-UCI Machine Learning Repository. https://doi.org/10.24432/C5QK7X.
+UCI Machine Learning Repository. https://doi.org/10.24432/C5QK7X
 ```
+
+---
+
+## Contributing (Agile Workflow)
+
+1. Each person works in their own task folder
+2. Open a GitHub Issue for your task and assign it to yourself
+3. Create a branch: `git checkout -b task1-pipeline`
+4. Push your work and open a Pull Request when ready
+5. Everyone reviews before merging to `main`
