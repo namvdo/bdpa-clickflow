@@ -1,7 +1,7 @@
 # Clickstream Analysis for Online Shopping — Big Data Project
 
 > Master's course project — Big Data (University of Oulu)
-> Tools: PySpark, Spark MLlib, Docker, Streamlit
+> Tools: PySpark, Spark MLlib, Docker, Streamlit (webapp)
 
 ---
 
