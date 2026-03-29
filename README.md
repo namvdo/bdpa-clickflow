@@ -9,11 +9,19 @@
 
 This project analyzes clickstream data from an online clothing store using a Big Data pipeline built on Apache Spark. We process raw user click logs, engineer session-level features, and apply machine learning to understand and predict user behavior. A recommender system surfaces product suggestions from browsing patterns and a shared Streamlit app presents all findings interactively.
 
-**Dataset:** [Clickstream Data for Online Shopping — UCI ML Repository](https://archive.ics.uci.edu/dataset/553/clickstream+data+for+online+shopping)
-
 - 165,474 click records | 14 features | No missing values
 - 5 months of data (April–August 2008)
 - Clothing store for pregnant women | Country-level IP data included
+
+## Dataset Info
+
+| Field     | Details                                                                                                                                  |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Source    | [Clickstream Data for Online Shopping — UCI ML Repository](https://archive.ics.uci.edu/dataset/553/clickstream+data+for+online+shopping) |
+| Instances | 165,474                                                                                                                                  |
+| Features  | 14 (year, month, day, order, country, session ID, page, page 2, colour, location, model photography, price, price 2, page)               |
+| Format    | CSV (semicolon `;` separated)                                                                                                            |
+| License   | CC BY 4.0                                                                                                                                |
 
 ---
 
@@ -40,20 +48,20 @@ Task 1 — Spark Ingestion & Pipeline
 
 ## Task Division
 
-| Task | Description | Owner |
-|------|-------------|-------|
-| Task 1 | Data Engineering & Spark Pipeline | Sajjad Ghaeminejad |
-| Task 2 | Exploratory Analysis & Business Insights | TBD |
-| Task 3 | ML & Behavior Prediction | TBD |
-| Task 4 | Recommender System | TBD |
-| Shared | Streamlit Integration App | Sajjad Ghaeminejad |
+| Task   | Description                              | Owner              |
+| ------ | ---------------------------------------- | ------------------ |
+| Task 1 | Data Engineering & Spark Pipeline        | Sajjad Ghaeminejad |
+| Task 2 | Exploratory Analysis & Business Insights | Hamid              |
+| Task 3 | ML & Behavior Prediction                 | Leo                |
+| Task 4 | Recommender System                       | Nam                |
+| Shared | Streamlit Integration App                | Sajjad Ghaeminejad |
 
 ---
 
 ## Repo Structure
 
 ```
-clickstream-bigdata-project/
+bdpa-clickflow/
 │
 ├── README.md                   # This file !
 ├── docker-compose.yml          # Spin up Spark environment
@@ -65,10 +73,10 @@ clickstream-bigdata-project/
 │   ├── project_idea.pdf
 │   └── architecture.png
 │
-├── task1_pipeline/             # Data Engineering & Spark Pipeline
-├── task2_eda/                  # Exploratory Analysis & Business Insights
-├── task3_ml/                   # ML & Behavior Prediction
-├── task4_recommender/          # Recommender System
+├── pipeline/             # Task 1 - Data Engineering & Spark Pipeline
+├── eda/                  # Task 2 - Exploratory Analysis & Business Insights
+├── ml/                   # Task 3 - ML & Behavior Prediction
+├── recommender/          # Task 4 - Recommender System
 │
 └── app/                        # Shared Streamlit App
 ```
