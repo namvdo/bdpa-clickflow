@@ -42,11 +42,11 @@ Task 1 — Spark Ingestion & Pipeline
 
 | Task       | Description                              | Owner |
 | ---------- | ---------------------------------------- | ----- | ------------------ |
-| **Task 1** | Data Engineering & Spark Pipeline        | TBD   |.
-| **Task 2** | Exploratory Analysis & Business Insights | TBD   |.
-| **Task 3** | ML & Behavior Prediction                 | TBD   |.
-| **Task 4** | Recommender System                       | TBD   |.
-| **TBD**    | Streamlit Integration App                | All   | Sajjad Ghaeminejad |
+| **Task 1** | Data Engineering & Spark Pipeline        | TBD   |.|
+| **Task 2** | Exploratory Analysis & Business Insights | TBD   |.|
+| **Task 3** | ML & Behavior Prediction                 | TBD   |.|
+| **Task 4** | Recommender System                       | TBD   |.|
+| **TBD**    | Streamlit Integration App                | All   | Sajjad Ghaeminejad ||
 
 ---
 
