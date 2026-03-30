@@ -83,11 +83,11 @@ Basic exploration of data, it's content and potential transformations for the fu
 1. Total available features (columns), and their description, useless features and why
 2. Data types and casting.
 3. Consitency of the data - do we have malformed values, do we have missing values? Datetime parsing etc.
-4. Basic aggregations.
+4. Basic aggregations (session level for instance).
 5. Basic plotting.
 6. df.info()
 
-This stage is very imporant since it's purpose is to create a unified preprocessing backbone for future steps, which can be shared by all teammates. It is important that each team member understands the data, and potential future steps.
+This stage is very imporant since it's purpose is to create a unified preprocessing backbone for future steps, which can be shared by all teammates. It is important that each teammember understands the data, and potential future steps.
 
 ### Task 2.
 
@@ -112,7 +112,7 @@ Outputs:
 
 ### Task 4.
 
-This task primarily focuses on development of simple recommender engine, which based on user click profile suggest products for user, for instance, or other potential ideas (this task may overlap with previous one).
+This task primarily focuses on development of simple recommender model, which based on user click profile suggest products for user, for instance, or other potential ideas (this task may overlap with previous one).
 
 1. Recommender model
 2. Applicable literature
