@@ -1,0 +1,22 @@
+name: LaTeX to PDF
+on:
+  push:
+    paths:
+      - report/**
+  workflow_dispatch:
+jobs:
+  build_latex:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull repo
+        uses: actions/checkout@v4
+      - name: GitHub Action for LaTeX
+        uses: xu-cheng/latex-action@v4
+        with:
+          root_file: Template.tex
+          working_directory: ./report/
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-pdf
+          path: ./report/main.pdf
