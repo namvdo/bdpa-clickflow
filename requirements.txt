@@ -1,4 +1,4 @@
 pyspark==3.5.4
 pandas==2.2.3
 jupyter==1.1.1
-matplotlib==3.10.1
+matplotlib==3.9.4
