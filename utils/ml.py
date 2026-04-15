@@ -59,12 +59,11 @@ def pipeline(drop: list[str] = ["year", "month", "order", "session ID"] ):
         .when(F.col("country").isin(non_eu_europe_codes), 2)
         .when(F.col("country").isin(outside_europe_codes), 3)
         .otherwise(4))
-
     #split clothing model strings into letter and number
     string_col = "page 2 (clothing model)"
     _df = df.withColumn("model_letter", F.substring(string_col, 1, 1)).withColumn("model_number", F.substring(string_col, 2, 3)).drop(string_col)
-    _df = _df.withColumnRenamed(_df.columns[1], "main_category")
-
+    _df = _df.withColumnRenamed("page 1 (main category)", "main_category")
+    
     #prepare column names
     numeric_cols = ["day", "price"]
     string_cols = ["model_letter", "model_number"]
