@@ -14,93 +14,77 @@ spark = SparkSession.builder.appName("ML").master("local[*]").getOrCreate()
 spark.conf.set("spark.sql.ansi.enabled", False)
 data_dir = "../dataset/e-shop clothing 2008.csv"
 
-eu_codes = [
-    2,
-    3,
-    8,
-    9,
-    10,
-    11,
-    14,
-    15,
-    16,
-    17,
-    18,
-    21,
-    22,
-    23,
-    24,
-    25,
-    27,
-    30,
-    34,
-    35,
-    36,
-    37,
-    41,
-]
+eu_codes = [2, 3, 8, 9, 10, 11, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 27, 30, 34, 35, 36, 37, 41]
 non_eu_europe_codes = [7, 19, 28, 31, 32, 33, 38, 39]
 outside_europe_codes = [1, 4, 5, 6, 20, 26, 40, 42]
 unidentified_codes = [12, 43, 44, 45, 46, 47]
 
 
-def pipeline(drop: list[str] = ["year", "month", "order", "session ID"] ):
+def prepare_data_pipeline(df: DataFrame, create_features_only = False, drop: list[str] = ["year", "order", "session ID", "price 2"] ):
     '''
     Returns Dataframe and pipeline objects\n
     Splits the "page 2 (clothing model)" into model_letter and model_number\n
+    Encodes day into sin and cos
+    One-hots month
+    Drops year, order, id, price 2 by default
     PCA is the last stage\n
     '''
-
-    df = spark.read.csv(data_dir, inferSchema=True, header=True, sep=";")
-    df = df.drop(*drop)
+    _df = df.drop(*drop)
     # add region column based on country codes
-    df = df.withColumn("country", F.when(F.col("country") == 29, 0)
+    _df = _df.withColumn("country", F.when(F.col("country") == 29, 0)
         .when(F.col("country").isin(eu_codes), 1)
         .when(F.col("country").isin(non_eu_europe_codes), 2)
         .when(F.col("country").isin(outside_europe_codes), 3)
         .otherwise(4))
+                                                                              
     #split clothing model strings into letter and number
     string_col = "page 2 (clothing model)"
-    _df = df.withColumn("model_letter", F.substring(string_col, 1, 1)).withColumn("model_number", F.substring(string_col, 2, 3)).drop(string_col)
+    _df = _df.withColumn("model_letter", F.substring(string_col, 1, 1)).withColumn("model_number", F.substring(string_col, 2, 3)).drop(string_col)
+
+    #sine and cosine functions for week day
+    _df = _df.withColumn("day_sin", F.sin(F.col("day") / 7 * 2* np.pi)).withColumn("day_cos", F.sin(F.col("day") / 7 * 2* np.pi)).drop("day")
     _df = _df.withColumnRenamed("page 1 (main category)", "main_category")
-    
-    #prepare column names
-    numeric_cols = ["day", "price"]
-    string_cols = ["model_letter", "model_number"]
-    binary_cols = ["price 2", "model photography"]
 
-    si_output = [col + "_id" for col in string_cols]
-    binary_output = [col + "_id" for col in binary_cols]
 
-    categorical_cols = [col for col in _df.columns if col not in numeric_cols + string_cols + binary_cols] + si_output
-    final_cols = [col+ "_enc"  for col in categorical_cols] + [col + "_s" for col in numeric_cols] + binary_output
+    if not create_features_only:
+        #prepare column names
+        numeric_cols = ["day_sin", "day_cos", "price"]
+        string_cols = ["model_letter", "model_number"]
+        binary_cols = ["model photography"]
 
-    #first encode letters, and additionally convert binary to 0, 1 index (1,2 now)
-    si = StringIndexer(inputCols=string_cols + binary_cols, outputCols=si_output + binary_output)
+        si_output = [col + "_id" for col in string_cols]
+        binary_output = [col + "_id" for col in binary_cols]
 
-    #onehot categorical columns
-    ohe = OneHotEncoder(inputCols=categorical_cols, outputCols=[col + "_enc" for col in categorical_cols])
+        categorical_cols = [col for col in _df.columns if col not in numeric_cols + string_cols + binary_cols] + si_output
+        final_cols = [col+ "_enc"  for col in categorical_cols] + [col + "_s" for col in numeric_cols] + binary_output
 
-    #va's for continous, vectorize continous
-    va_1 = VectorAssembler(inputCols=["price"], outputCol="price_v")
-    va_2 = VectorAssembler(inputCols=["day"], outputCol="day_v")
-    vas = [va_1, va_2]
+        #first encode letters, and additionally convert binary to 0, 1 index (1,2 now)
+        si = StringIndexer(inputCols=string_cols + binary_cols, outputCols=si_output + binary_output)
 
-    # scalers 
-    ss = StandardScaler(inputCol = "price_v", outputCol="price_s")
-    mm = MinMaxScaler(inputCol= "day_v", outputCol="day_s")
+        #onehot categorical columns
+        ohe = OneHotEncoder(inputCols=categorical_cols, outputCols=[col + "_enc" for col in categorical_cols])
 
-    #Final vector 
-    va_final = VectorAssembler(inputCols=final_cols, outputCol="vector")
+        #va's for continous, vectorize continous
+        va_1 = VectorAssembler(inputCols=["price"], outputCol="price_v")
+        va_2 = VectorAssembler(inputCols=["day_cos"], outputCol="day_cos_s")
+        va_3 = VectorAssembler(inputCols=["day_sin"], outputCol="day_sin_s")
+        vas = [va_1, va_2, va_3]
 
-    #Reduce
-    pca = PCA(k = 30, inputCol="vector", outputCol="reduced")
+        # scalers 
+        ss = StandardScaler(inputCol = "price_v", outputCol="price_s")
+        #mm = MinMaxScaler(inputCol= "day_v", outputCol="day_s") //skip with sin + cos
 
-    stages = [*vas, si, ohe, ss, mm, va_final, pca]
-    pipe = Pipeline(stages = stages)
-    _df.show(5)
+        #Final vector 
+        va_final = VectorAssembler(inputCols=final_cols, outputCol="vector")
 
-    return _df, pipe
+        #Reduce
+        pca = PCA(k = 30, inputCol="vector", outputCol="reduced")
+
+        stages = [*vas, si, ohe, ss, va_final, pca] #mm skip day scaler
+        pipe = Pipeline(stages = stages)
+        _df.show(5)
+        return _df, pipe
+    return _df
 
 def evaluate_clustering_model(model_object, df: DataFrame, N_K: list[int], features_col: str = "reduced", prediction_col: str = "pred", plot_results: bool = False):
     '''
