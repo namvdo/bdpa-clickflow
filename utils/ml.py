@@ -20,13 +20,14 @@ outside_europe_codes = [1, 4, 5, 6, 20, 26, 40, 42]
 unidentified_codes = [12, 43, 44, 45, 46, 47]
 
 
-def prepare_data_pipeline(df: DataFrame, create_features_only = False, drop: list[str] = ["year", "order", "session ID", "price 2"] ):
+def prepare_data_pipeline(df: DataFrame, create_features_only = False, drop: list[str] = ["day", "month", "year", "order", "session ID"] ):
     '''
     Returns Dataframe and pipeline objects\n
     Splits the "page 2 (clothing model)" into model_letter and model_number\n
-    Encodes day into sin and cos
-    One-hots month
-    Drops year, order, id, price 2 by default
+    Groups countries by region
+    Minmax day (currently drops it)\n
+    One-hots categorical\n
+    Drops year, month, order, id by default
     PCA is the last stage\n
     '''
     _df = df.drop(*drop)
@@ -41,14 +42,28 @@ def prepare_data_pipeline(df: DataFrame, create_features_only = False, drop: lis
     string_col = "page 2 (clothing model)"
     _df = _df.withColumn("model_letter", F.substring(string_col, 1, 1)).withColumn("model_number", F.substring(string_col, 2, 3)).drop(string_col)
 
-    #sine and cosine functions for week day
-    _df = _df.withColumn("day_sin", F.sin(F.col("day") / 7 * 2* np.pi)).withColumn("day_cos", F.sin(F.col("day") / 7 * 2* np.pi)).drop("day")
+    '''
+    # period of 31 also tested, no benefit
+    _df = (
+        _df
+        .withColumn("date",F.to_date(F.concat_ws("-", F.col("year"), F.col("month"), F.col("day")), "yyyy-M-d"))
+        .drop("month", "year", "day")
+        .withColumn("month", F.month("date"))
+        .withColumn("weekday", F.dayofweek("date") - 1)   # 0..6
+        .drop("date"))
+    _df = (
+        _df
+        .withColumn("day_sin", F.sin(F.col("weekday") / 7 * 2 * np.pi))
+        .withColumn("day_cos", F.cos(F.col("weekday") / 7 * 2 * np.pi))
+        .drop("weekday"))
+    '''
+    
     _df = _df.withColumnRenamed("page 1 (main category)", "main_category")
 
 
     if not create_features_only:
         #prepare column names
-        numeric_cols = ["day_sin", "day_cos", "price"]
+        numeric_cols = ["price"]
         string_cols = ["model_letter", "model_number"]
         binary_cols = ["model photography"]
 
@@ -66,13 +81,13 @@ def prepare_data_pipeline(df: DataFrame, create_features_only = False, drop: lis
 
         #va's for continous, vectorize continous
         va_1 = VectorAssembler(inputCols=["price"], outputCol="price_v")
-        va_2 = VectorAssembler(inputCols=["day_cos"], outputCol="day_cos_s")
-        va_3 = VectorAssembler(inputCols=["day_sin"], outputCol="day_sin_s")
-        vas = [va_1, va_2, va_3]
+       #va_2 = VectorAssembler(inputCols=["day"], outputCol="day_v")
+       #va_3 = VectorAssembler(inputCols=["day_sin"], outputCol="day_sin_s")
+        vas = [va_1]#, va_2]
 
         # scalers 
         ss = StandardScaler(inputCol = "price_v", outputCol="price_s")
-        #mm = MinMaxScaler(inputCol= "day_v", outputCol="day_s") //skip with sin + cos
+       # mm = MinMaxScaler(inputCol= "day_v", outputCol="day_s") 
 
         #Final vector 
         va_final = VectorAssembler(inputCols=final_cols, outputCol="vector")
@@ -80,7 +95,7 @@ def prepare_data_pipeline(df: DataFrame, create_features_only = False, drop: lis
         #Reduce
         pca = PCA(k = 30, inputCol="vector", outputCol="reduced")
 
-        stages = [*vas, si, ohe, ss, va_final, pca] #mm skip day scaler
+        stages = [*vas, si, ohe, ss, va_final, pca] #mm,
         pipe = Pipeline(stages = stages)
         _df.show(5)
         return _df, pipe
