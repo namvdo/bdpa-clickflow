@@ -1,1 +1,0 @@
-{"class":"org.apache.spark.ml.feature.StandardScalerModel","timestamp":1776599533643,"sparkVersion":"4.1.1","uid":"StandardScaler_6053dc27f632","paramMap":{"inputCol":"price_v","outputCol":"price_s"},"defaultParamMap":{"outputCol":"StandardScaler_6053dc27f632__output","withMean":false,"withStd":true}}
