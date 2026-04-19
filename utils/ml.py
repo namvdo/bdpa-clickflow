@@ -20,23 +20,22 @@ outside_europe_codes = [1, 4, 5, 6, 20, 26, 40, 42]
 unidentified_codes = [12, 43, 44, 45, 46, 47]
 
 
-def prepare_data_pipeline(df: DataFrame, create_features_only = False, drop: list[str] = ["day", "month", "year", "order", "session ID"] ):
+def prepare_data_pipeline(df: DataFrame, create_features_only = False, omit: list[str] = ["day", "month", "year", "order", "session ID"]):
     '''
     Returns Dataframe and pipeline objects\n
     Splits the "page 2 (clothing model)" into model_letter and model_number\n
     Groups countries by region
     Minmax day (currently drops it)\n
     One-hots categorical\n
-    Drops year, month, order, id by default
+    Omits year, month, order, id by default
     PCA is the last stage\n
     '''
-    _df = df.drop(*drop)
     # add region column based on country codes
-    _df = _df.withColumn("country", F.when(F.col("country") == 29, 0)
+    _df = df.withColumn("country", F.when(F.col("country") == 29, 0)
         .when(F.col("country").isin(eu_codes), 1)
         .when(F.col("country").isin(non_eu_europe_codes), 2)
         .when(F.col("country").isin(outside_europe_codes), 3)
-        .otherwise(4))
+        .otherwise(4)).withColumn("index", F.monotonically_increasing_id())
                                                                               
     #split clothing model strings into letter and number
     string_col = "page 2 (clothing model)"
@@ -59,7 +58,8 @@ def prepare_data_pipeline(df: DataFrame, create_features_only = False, drop: lis
     '''
     
     _df = _df.withColumnRenamed("page 1 (main category)", "main_category")
-
+    cols = [col for col in _df.columns if col not in omit]
+    cols.remove("index")
 
     if not create_features_only:
         #prepare column names
@@ -70,7 +70,7 @@ def prepare_data_pipeline(df: DataFrame, create_features_only = False, drop: lis
         si_output = [col + "_id" for col in string_cols]
         binary_output = [col + "_id" for col in binary_cols]
 
-        categorical_cols = [col for col in _df.columns if col not in numeric_cols + string_cols + binary_cols] + si_output
+        categorical_cols = [col for col in cols if col not in numeric_cols + string_cols + binary_cols] + si_output
         final_cols = [col+ "_enc"  for col in categorical_cols] + [col + "_s" for col in numeric_cols] + binary_output
 
         #first encode letters, and additionally convert binary to 0, 1 index (1,2 now)
