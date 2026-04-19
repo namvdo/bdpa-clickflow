@@ -81,7 +81,7 @@ def prepare_data_pipeline(df: DataFrame, create_features_only = False, drop: lis
 
         #va's for continous, vectorize continous
         va_1 = VectorAssembler(inputCols=["price"], outputCol="price_v")
-       #va_2 = VectorAssembler(inputCols=["day"], outputCol="day_v")
+       #va_2 = VectorAssembler(inputCols=["day_cos"], outputCol="day_cos_s")
        #va_3 = VectorAssembler(inputCols=["day_sin"], outputCol="day_sin_s")
         vas = [va_1]#, va_2]
 
