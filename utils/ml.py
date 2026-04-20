@@ -5,6 +5,7 @@ from pyspark.sql import functions as F
 from pyspark.sql import SparkSession
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.evaluation import ClusteringEvaluator
+from pyspark.ml.regression import LinearRegression
 from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score
 import pandas as pd
 import numpy as np
@@ -18,6 +19,77 @@ eu_codes = [2, 3, 8, 9, 10, 11, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 27, 30, 
 non_eu_europe_codes = [7, 19, 28, 31, 32, 33, 38, 39]
 outside_europe_codes = [1, 4, 5, 6, 20, 26, 40, 42]
 unidentified_codes = [12, 43, 44, 45, 46, 47]
+
+def fit_zipfs(freqs: DataFrame, B = 10, frequency_col = "count", id_col = "id", ignore_bottom = 0, ignore_top=0, plot = True):
+    '''
+    Fits and evaluates Zipf's law and visualizes distributions\n
+    Set  ignore_bottom = 0, ignore_top=0 to ignore in fitting and evaluation\n
+    '''
+
+    def zipfs_f(ranks: DataFrame, C, alpha):
+        preds = ranks.withColumn("density_pred", C / (F.col("rank") + F.lit(B))**alpha)
+        return preds
+    
+    freqz = freqs.orderBy(frequency_col, ascending = False)
+    size = freqz.count()
+    freqz = freqz.withColumn("rank", F.monotonically_increasing_id() + 1)
+    freqz = freqz.withColumn("log_ranks", F.log(F.col("rank") + F.lit(B)))
+    freqz = freqz.withColumn("log_freqs", F.log(frequency_col))
+
+    #linear log-log fit
+    va_ranks = VectorAssembler(inputCols=["log_ranks"], outputCol="log_ranks_v")
+    reg_zipf = LinearRegression(featuresCol="log_ranks_v", labelCol="log_freqs", predictionCol="estimate", regParam=1e-8)
+    
+    filtered = freqz
+    if ignore_bottom != 0 or ignore_top != 0:
+        print("Ignored %d top and %d bottom tokens for estimation and fitting" %(ignore_top, ignore_bottom))
+        filtered = freqz.filter((F.col('rank') < (size - ignore_bottom)) & (F.col('rank') > ignore_top)).withColumn("rank", F.monotonically_increasing_id() + 1)
+
+    zipfs_pipeline = Pipeline(stages = [va_ranks, reg_zipf]).fit(filtered)
+    zipfs_model = zipfs_pipeline.stages[-1]
+
+    coefs = zipfs_model.coefficients.toArray()
+    log_C = zipfs_model.intercept
+    C = np.exp(log_C)
+    alpha = -coefs[0] 
+
+    preds = zipfs_pipeline.transform(freqz).select(id_col, "rank", "log_ranks", "log_freqs", frequency_col, "estimate")
+    final = zipfs_f(preds, C, alpha=alpha)
+
+    if plot:
+        preds_pd = final.toPandas()
+        plt.figure(figsize=(10, 6))
+        plt.plot(preds_pd["log_ranks"], preds_pd["log_freqs"])
+        plt.plot(preds_pd["log_ranks"], preds_pd["estimate"])
+        plt.title("Zipf's log-log curve")
+        plt.ylabel("Log Token frequency")
+        plt.xlabel("Log Token rank + B")
+        plt.show()
+        print("Zipf's fit R-squared: ", zipfs_model.summary.r2)
+        print("Zipf's fit MSE: ", zipfs_model.summary.meanSquaredError)
+        print("Zipf's fit Explained Variance: ", zipfs_model.summary.explainedVariance)
+        print(f"C estimate: {C:.2f}")
+        print(f"Alpha estimate: {alpha:.2f}")
+
+        preds_pd["residual"] = preds_pd["log_freqs"] - preds_pd["estimate"]
+
+        plt.figure(figsize=(10, 4))
+        plt.plot(preds_pd["rank"], preds_pd["residual"])
+        plt.axhline(0, linestyle="--")
+        plt.title("Residuals vs Rank")
+        plt.show()
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(preds_pd["rank"], preds_pd[frequency_col], label = "Original")
+        plt.title("Original density curve vs Zipf's estimate")
+        plt.plot(preds_pd["rank"], preds_pd["density_pred"], label = "Estimate")
+        plt.legend()
+        plt.ylim((0,preds_pd[frequency_col].max()))
+        plt.ylabel("Frequency")
+        plt.xlabel("Token Rank")
+        plt.show()
+        return final, preds_pd
+    return final
 
 
 def prepare_data_pipeline(df: DataFrame, create_features_only = False, omit: list[str] = ["day", "month", "year", "order", "session ID"]):
