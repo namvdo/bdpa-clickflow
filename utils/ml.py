@@ -3,6 +3,7 @@ from pyspark.ml import Pipeline
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql import SparkSession
+from pyspark.sql import Window
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.evaluation import ClusteringEvaluator
 from pyspark.ml.regression import LinearRegression
@@ -19,6 +20,31 @@ eu_codes = [2, 3, 8, 9, 10, 11, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 27, 30, 
 non_eu_europe_codes = [7, 19, 28, 31, 32, 33, 38, 39]
 outside_europe_codes = [1, 4, 5, 6, 20, 26, 40, 42]
 unidentified_codes = [12, 43, 44, 45, 46, 47]
+
+
+def load_data(dir: str):
+    return spark.read.csv(dir, header=True, inferSchema=True, sep = ";")
+
+def tokenize(raw_df: DataFrame, build_sequences = True, order_col = "order", grouping_col = "session ID",  to_ignore: list[str] = ["year", "month", "day", "country"]):
+    '''
+    tokenizes clicks ingoring the mentioned colums, by default ignores "year", "month", "day", "country"\n
+    returns tokens and original dataframe with "id" column
+    '''
+    token_features = [col for col in raw_df.columns if col not in to_ignore + [order_col, grouping_col]]
+    tokens = raw_df.select(*token_features).drop_duplicates()
+    tokens = tokens.withColumn("id", F.monotonically_increasing_id())
+    tokenized = raw_df.join(tokens, on = token_features, how="left").drop(*token_features)
+    if build_sequences:
+        w = Window.partitionBy(grouping_col).orderBy(order_col)
+        tokenized = (tokenized
+            .withColumn("sequence", F.collect_list("id").over(w))
+            .withColumn("rn", F.row_number().over(w.orderBy(F.desc(order_col)))).filter(F.col("rn") == 1)
+            .orderBy(grouping_col).drop("rn", "id"))
+    print("TOKENIZED DF:")
+    tokenized.show(2)
+    print("TOKEN INFO: ")
+    tokens.show(2)
+    return tokenized, tokens
 
 def fit_zipfs(freqs: DataFrame, B = 10, frequency_col = "count", id_col = "id", ignore_bottom = 0, ignore_top=0, plot = True):
     '''
