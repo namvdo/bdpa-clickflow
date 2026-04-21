@@ -7,6 +7,7 @@ from pyspark.sql import Window
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.evaluation import ClusteringEvaluator
 from pyspark.ml.regression import LinearRegression
+from pyspark.sql import types
 from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score
 import pandas as pd
 import numpy as np
@@ -25,14 +26,21 @@ unidentified_codes = [12, 43, 44, 45, 46, 47]
 def load_data(dir: str):
     return spark.read.csv(dir, header=True, inferSchema=True, sep = ";")
 
-def tokenize(raw_df: DataFrame, build_sequences = True, order_col = "order", grouping_col = "session ID",  to_ignore: list[str] = ["year", "month", "day", "country"]):
+def tokenize(raw_df: DataFrame,
+            build_sequences = True,
+            order_col = "order",
+            grouping_col = "session ID",
+            to_ignore: list[str] = ["year", "month", "day", "country"],
+            only_tokens = False):
     '''
     tokenizes clicks ingoring the mentioned colums, by default ignores "year", "month", "day", "country"\n
     returns tokens and original dataframe with "id" column
     '''
     token_features = [col for col in raw_df.columns if col not in to_ignore + [order_col, grouping_col]]
     tokens = raw_df.select(*token_features).drop_duplicates()
-    tokens = tokens.withColumn("id", F.monotonically_increasing_id())
+    tokens = tokens.withColumn("id", F.monotonically_increasing_id().cast("string"))
+    if only_tokens:
+       return tokens
     tokenized = raw_df.join(tokens, on = token_features, how="left").drop(*token_features)
     if build_sequences:
         w = Window.partitionBy(grouping_col).orderBy(order_col)
