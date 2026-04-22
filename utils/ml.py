@@ -207,7 +207,7 @@ def prepare_data_pipeline(df: DataFrame, create_features_only = False, omit: lis
         return _df, pipe
     return _df
 
-def evaluate_clustering_model(model_object, df: DataFrame, N_K: list[int], features_col: str = "reduced", prediction_col: str = "pred", plot_results: bool = False):
+def evaluate_clustering_model(model_object, df: DataFrame, N_K: list[int], distance = "squaredEuclidean", features_col: str = "reduced", prediction_col: str = "pred", plot_results: bool = False):
     '''
     For models with n-clusters\n
     Since dataset is small we can straight evaluate also DB and CH scores using sklearn, by converting our feature vector into numpy array,\n
@@ -218,11 +218,16 @@ def evaluate_clustering_model(model_object, df: DataFrame, N_K: list[int], featu
     x = np.array(x["vector"].to_list())
 
     results = {"N_K": [], "silouhette" : [], "davies_bouldin": [], "calinski_harabasz": []}
-    ce = ClusteringEvaluator(predictionCol=prediction_col, featuresCol=features_col)
+    ce = ClusteringEvaluator(predictionCol=prediction_col, featuresCol=features_col, distanceMeasure = distance)
     model_object.setFeaturesCol(features_col)
     model_object.setPredictionCol(prediction_col)
     model_object.setSeed(55)
-
+    
+    try:
+        model_object.setDistanceMeasure(distance)
+    except:
+        print(f"Model doesn't support {distance} measure")
+        
     for K in N_K:
         model_object.setK(K)
         model = model_object.fit(X)
