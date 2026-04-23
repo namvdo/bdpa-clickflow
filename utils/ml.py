@@ -7,9 +7,7 @@ from pyspark.sql import Window
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.evaluation import ClusteringEvaluator
 from pyspark.ml.regression import LinearRegression
-from pyspark.sql import types
 from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -27,7 +25,7 @@ unidentified_codes = [12, 43, 44, 45, 46, 47]
 def load_data(dir: str):
     return spark.read.csv(dir, header=True, inferSchema=True, sep = ";")
 
-def vectorize(sequences: DataFrame, sequenceCol = "sequence", w2v_path: str = "word2vec_model"):
+def vectorize(sequences: DataFrame, sequenceCol = "sequence", w2v_path: str = "word2vec_model", return_vocabulary = True):
     try:
         if w2v_path in os.listdir(os.getcwd()):
             w2v = Word2VecModel.load(w2v_path)
@@ -36,7 +34,7 @@ def vectorize(sequences: DataFrame, sequenceCol = "sequence", w2v_path: str = "w
     except:
         print("Word2Vec model not found. Refitting...")
         w2v = Word2Vec(vectorSize=32, maxSentenceLength=195, inputCol=sequenceCol, seed = 52).fit(sequences)
-        w2v.save(w2v_path)
+        w2v.write().overwrite().save(w2v_path)
     finally:
         vectors = w2v.getVectors()
         melted_sequences = sequences.withColumn("id", F.explode(sequenceCol))
@@ -45,6 +43,8 @@ def vectorize(sequences: DataFrame, sequenceCol = "sequence", w2v_path: str = "w
         melted_sequences = melted_sequences.join(vectors.withColumnRenamed("word", "id"), on = "id", how = "left").drop(sequenceCol)
         melted_sequences = melted_sequences.dropna()
         melted_sequences.show(5)
+        if return_vocabulary:
+            return melted_sequences, vectors
         return melted_sequences
 
 def tokenize(raw_df: DataFrame,
