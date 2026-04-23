@@ -1,4 +1,4 @@
-from pyspark.ml.feature import OneHotEncoder, StandardScaler, VectorAssembler, MinMaxScaler, StringIndexer, PCA
+from pyspark.ml.feature import OneHotEncoder, StandardScaler, VectorAssembler, MinMaxScaler, StringIndexer, PCA, Word2Vec, Word2VecModel
 from pyspark.ml import Pipeline
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
@@ -12,6 +12,7 @@ from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 spark = SparkSession.builder.appName("ML").master("local[*]").getOrCreate()
 spark.conf.set("spark.sql.ansi.enabled", False)
@@ -25,6 +26,26 @@ unidentified_codes = [12, 43, 44, 45, 46, 47]
 
 def load_data(dir: str):
     return spark.read.csv(dir, header=True, inferSchema=True, sep = ";")
+
+def vectorize(sequences: DataFrame, sequenceCol = "sequence", w2v_path: str = "word2vec_model"):
+    try:
+        if w2v_path in os.listdir(os.getcwd()):
+            w2v = Word2VecModel.load(w2v_path)
+        else:
+            raise
+    except:
+        print("Word2Vec model not found. Refitting...")
+        w2v = Word2Vec(vectorSize=32, maxSentenceLength=195, inputCol=sequenceCol, seed = 52).fit(sequences)
+        w2v.save(w2v_path)
+    finally:
+        vectors = w2v.getVectors()
+        melted_sequences = sequences.withColumn("id", F.explode(sequenceCol))
+        if "order" in sequences.columns:
+            melted_sequences = melted_sequences.drop("order")
+        melted_sequences = melted_sequences.join(vectors.withColumnRenamed("word", "id"), on = "id", how = "left").drop(sequenceCol)
+        melted_sequences = melted_sequences.dropna()
+        melted_sequences.show(5)
+        return melted_sequences
 
 def tokenize(raw_df: DataFrame,
             build_sequences = True,
