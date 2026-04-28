@@ -12,7 +12,7 @@ METRICS_PATH = Path(__file__).parent.parent.parent / "evaluation_metrics" / "rec
 MODEL_COLORS = {
     "ALS": "#4c72b0",
     "Popularity baseline": "#2ca02c",
-    "Content k-NN": "#ff7f0e",
+    "Item k-NN": "#ff7f0e",
     "Sequential warm-up": "#c44e52",
 }
 
@@ -130,7 +130,7 @@ cold_baseline = cold["popularity"]
 warm_rank_candidates = {
     "ALS": warm["als"]["NDCG@10"],
     "Popularity baseline": warm_baseline["NDCG@10"],
-    "Content k-NN": warm["knn"]["NDCG@10"],
+    "Item k-NN": warm["knn"]["NDCG@10"],
 }
 best_warm_model = max(warm_rank_candidates, key=warm_rank_candidates.get)
 
@@ -138,16 +138,16 @@ warm_chart_df = pd.DataFrame(
     [
         {"Model": "Popularity baseline", "Metric": "NDCG@10", "Value": warm_baseline["NDCG@10"], "Delta": 0.0},
         {"Model": "ALS", "Metric": "NDCG@10", "Value": warm["als"]["NDCG@10"], "Delta": warm["als"]["NDCG@10"] - warm_baseline["NDCG@10"]},
-        {"Model": "Content k-NN", "Metric": "NDCG@10", "Value": warm["knn"]["NDCG@10"], "Delta": warm["knn"]["NDCG@10"] - warm_baseline["NDCG@10"]},
+        {"Model": "Item k-NN", "Metric": "NDCG@10", "Value": warm["knn"]["NDCG@10"], "Delta": warm["knn"]["NDCG@10"] - warm_baseline["NDCG@10"]},
         {"Model": "Popularity baseline", "Metric": "Recall@10", "Value": warm_baseline["Recall@10"], "Delta": 0.0},
         {"Model": "ALS", "Metric": "Recall@10", "Value": warm["als"]["Recall@10"], "Delta": warm["als"]["Recall@10"] - warm_baseline["Recall@10"]},
-        {"Model": "Content k-NN", "Metric": "Recall@10", "Value": warm["knn"]["Recall@10"], "Delta": warm["knn"]["Recall@10"] - warm_baseline["Recall@10"]},
+        {"Model": "Item k-NN", "Metric": "Recall@10", "Value": warm["knn"]["Recall@10"], "Delta": warm["knn"]["Recall@10"] - warm_baseline["Recall@10"]},
         {"Model": "Popularity baseline", "Metric": "MRR@10", "Value": warm_baseline["MRR@10"], "Delta": 0.0},
         {"Model": "ALS", "Metric": "MRR@10", "Value": warm["als"]["MRR@10"], "Delta": warm["als"]["MRR@10"] - warm_baseline["MRR@10"]},
-        {"Model": "Content k-NN", "Metric": "MRR@10", "Value": warm["knn"]["MRR@10"], "Delta": warm["knn"]["MRR@10"] - warm_baseline["MRR@10"]},
+        {"Model": "Item k-NN", "Metric": "MRR@10", "Value": warm["knn"]["MRR@10"], "Delta": warm["knn"]["MRR@10"] - warm_baseline["MRR@10"]},
         {"Model": "Popularity baseline", "Metric": "Coverage", "Value": warm_baseline["Coverage"], "Delta": 0.0},
         {"Model": "ALS", "Metric": "Coverage", "Value": warm["als"]["Coverage"], "Delta": warm["als"]["Coverage"] - warm_baseline["Coverage"]},
-        {"Model": "Content k-NN", "Metric": "Coverage", "Value": warm["knn"]["Coverage"], "Delta": warm["knn"]["Coverage"] - warm_baseline["Coverage"]},
+        {"Model": "Item k-NN", "Metric": "Coverage", "Value": warm["knn"]["Coverage"], "Delta": warm["knn"]["Coverage"] - warm_baseline["Coverage"]},
     ]
 )
 
@@ -165,7 +165,7 @@ warm_table_raw_df = pd.DataFrame(
             "Delta Coverage": 0.0,
         },
         {
-            "Model": "Content k-NN",
+            "Model": "Item k-NN",
             "NDCG@10": warm["knn"]["NDCG@10"],
             "Delta NDCG@10": warm["knn"]["NDCG@10"] - warm_baseline["NDCG@10"],
             "Recall@10": warm["knn"]["Recall@10"],
@@ -285,7 +285,7 @@ with warm_tab:
         f"""
 For sessions with multiple interactions, **{best_warm_model}** is the strongest ranking model here on
 **NDCG@10 = {warm_rank_candidates[best_warm_model]:.4f}**.
-The chart below compares **ALS**, **Popularity baseline**, and **Content k-NN** across all warm-session metrics.
+The chart below compares **ALS**, **Popularity baseline**, and **Item k-NN** across all warm-session metrics.
 """
     )
 
@@ -294,14 +294,14 @@ The chart below compares **ALS**, **Popularity baseline**, and **Content k-NN** 
     for metric_name, column in zip(warm_metric_order, warm_columns):
         with column:
             st.altair_chart(
-                build_metric_chart(warm_chart_df, metric_name, ["Popularity baseline", "Content k-NN", "ALS"]),
+                build_metric_chart(warm_chart_df, metric_name, ["Popularity baseline", "Item k-NN", "ALS"]),
                 use_container_width=True,
             )
 
     st.markdown(
         f"""
 - **ALS** improves the warm-session baseline on **NDCG@10** by **{warm["als"]["NDCG@10"] - warm_baseline["NDCG@10"]:+.4f}** and on **Recall@10** by **{warm["als"]["Recall@10"] - warm_baseline["Recall@10"]:+.4f}**.
-- **Content k-NN** currently has **{warm["knn"]["Coverage"]:.2%} coverage** with a **{warm["knn"]["NDCG@10"] - warm_baseline["NDCG@10"]:+.4f}** change in NDCG@10 and **{warm["knn"]["Recall@10"] - warm_baseline["Recall@10"]:+.4f}** in Recall@10 vs the warm-session baseline.
+- **Item k-NN** currently has **{warm["knn"]["Coverage"]:.2%} coverage** with a **{warm["knn"]["NDCG@10"] - warm_baseline["NDCG@10"]:+.4f}** change in NDCG@10 and **{warm["knn"]["Recall@10"] - warm_baseline["Recall@10"]:+.4f}** in Recall@10 vs the warm-session baseline.
 """
     )
 
