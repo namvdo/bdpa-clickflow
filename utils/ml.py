@@ -14,7 +14,7 @@ import os
 
 spark = SparkSession.builder.appName("ML").master("local[*]").getOrCreate()
 spark.conf.set("spark.sql.ansi.enabled", False)
-data_dir = "../dataset/e-shop clothing 2008.csv"
+data_dir = "../dataset/e_shop_clothing_2008.csv"
 
 eu_codes = [2, 3, 8, 9, 10, 11, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 27, 30, 34, 35, 36, 37, 41]
 non_eu_europe_codes = [7, 19, 28, 31, 32, 33, 38, 39]
@@ -25,7 +25,11 @@ unidentified_codes = [12, 43, 44, 45, 46, 47]
 def load_data(dir: str):
     return spark.read.csv(dir, header=True, inferSchema=True, sep = ";")
 
-def vectorize(sequences: DataFrame, sequenceCol = "sequence", w2v_path: str = "word2vec_model", return_vocabulary = True):
+def vectorize(sequences: DataFrame, sequenceCol = "sequence", w2v_path: str = "word2vec_model", return_vocabulary = True, model_only = False):
+    '''
+    trains word2vec model, and transforms dataframe of sequences\n
+    set model_only = True, to get only vocabulary\n
+    '''
     try:
         if w2v_path in os.listdir(os.getcwd()):
             w2v = Word2VecModel.load(w2v_path)
@@ -37,9 +41,11 @@ def vectorize(sequences: DataFrame, sequenceCol = "sequence", w2v_path: str = "w
         w2v.write().overwrite().save(w2v_path)
     finally:
         vectors = w2v.getVectors()
+        if model_only:
+            if return_vocabulary:
+                return vectors
+            return
         melted_sequences = sequences.withColumn("id", F.explode(sequenceCol))
-        if "order" in sequences.columns:
-            melted_sequences = melted_sequences.drop("order")
         melted_sequences = melted_sequences.join(vectors.withColumnRenamed("word", "id"), on = "id", how = "left").drop(sequenceCol)
         melted_sequences = melted_sequences.dropna()
         melted_sequences.show(5)
@@ -52,28 +58,50 @@ def tokenize(raw_df: DataFrame,
             order_col = "order",
             grouping_col = "session ID",
             to_ignore: list[str] = ["year", "month", "day", "country"],
-            only_tokens = False):
+            only_tokens = False,
+            test = False,
+            reserve_gt_clicks_N = 1,
+            tokens_df: DataFrame = None):
     '''
     tokenizes clicks ingoring the mentioned colums, by default ignores "year", "month", "day", "country"\n
     returns tokens and original dataframe with "id" column
     '''
     token_features = [col for col in raw_df.columns if col not in to_ignore + [order_col, grouping_col]]
-    tokens = raw_df.select(*token_features).drop_duplicates()
-    tokens = tokens.withColumn("id", F.monotonically_increasing_id().cast("string"))
+    tokens = tokens_df
+    if tokens == None:
+        tokens = raw_df.select(*token_features).drop_duplicates()
+        tokens = tokens.withColumn("id", F.monotonically_increasing_id().cast("string"))
     if only_tokens:
        return tokens
     tokenized = raw_df.join(tokens, on = token_features, how="left").drop(*token_features)
     if build_sequences:
-        w = Window.partitionBy(grouping_col).orderBy(order_col)
-        tokenized = (tokenized
-            .withColumn("sequence", F.collect_list("id").over(w))
-            .withColumn("rn", F.row_number().over(w.orderBy(F.desc(order_col)))).filter(F.col("rn") == 1)
-            .orderBy(grouping_col).drop("rn", "id"))
+        if test == False:
+            w = Window.partitionBy(grouping_col).rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing)
+            tokenized = (tokenized
+                .withColumn("sequence", F.collect_list("id").over(w))
+                .filter(F.col("order") == 1)
+                .drop("id"))
+        else:
+            w = Window.partitionBy(grouping_col).orderBy("order")
+            tokenized = (tokenized
+                .withColumns({"sequence": F.collect_list("id").over(w), "next": F.lag("id", -reserve_gt_clicks_N).over(w)}))
+            tokenized = tokenized.drop("id").dropna()
     print("TOKENIZED DF:")
-    tokenized.show(2)
+    tokenized.show(10)
     print("TOKEN INFO: ")
-    tokens.show(2)
+    tokens.show(10)
     return tokenized, tokens
+
+def train_test_split(df: DataFrame, train_size = 0.8):
+    '''
+    returns train, test dataframes, stratified by session lengths\n
+    default train_size is 80%
+    '''
+    sessions = df.select("session ID").groupBy("session ID").count().withColumnRenamed("count", "length")
+    fractions = {row["length"]: train_size for row in sessions.select("length").distinct().collect()}
+    train_ids = sessions.sampleBy(col="length", fractions=fractions, seed=42).select("session ID")
+    test_ids = sessions.join(train_ids, on="session ID", how="left_anti").select("session ID")
+    return df.join(train_ids, on = "session ID", how="inner"), df.join(test_ids, on = "session ID", how="inner")
 
 def fit_zipfs(freqs: DataFrame, B = 10, frequency_col = "count", id_col = "id", ignore_bottom = 0, ignore_top=0, plot = True):
     '''
