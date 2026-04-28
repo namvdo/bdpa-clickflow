@@ -1,9 +1,9 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name="bdpa-clickflow",
     version="0.2.0",
-    packages=find_packages(),
+    packages=["utils", "pipeline"],
     install_requires=[
         "streamlit",
         "pandas",
