@@ -1,8 +1,5 @@
-pyspark==4.1.1
-pandas==3.0.1
-numpy==2.4.3
-jupyter==1.1.1
-matplotlib==3.10.9
-ipykernel==7.2.0
-py4j==0.10.9.9
-streamlit==1.56.0
+streamlit
+pandas
+altair
+pyarrow
+matplotlib
