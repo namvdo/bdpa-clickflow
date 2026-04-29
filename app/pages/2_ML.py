@@ -2,17 +2,17 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-st.title("User-Entity Behavior Analytics")
-st.write("This pages provides an overview on event- and session-level clustering experiments, results, and performance indicators. Along with some complementary analyses.")
+st.title("User-Entity Behavior modeling")
+st.write("This page provides an overview on event- and session-level clustering experiments, results, and performance indicators. Along with some complementary analyses.")
 from pathlib import Path
 path = Path(__file__).parent / 'figures'
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "Frequential analysis",
-    "Event-Level clustering",
-    "Session-Level clustering",
-    "Cluster Analysis K-Means",
-    "Cluster Analysis Word2Vec"
+    "Event-Level experiments",
+    "Session-Level experiments",
+    "Event-level Cluster Analysis",
+    "Session-level Cluster Analysis"
 ])
 
 
@@ -44,11 +44,11 @@ with tab1:
     st.markdown("### Visual analysis")
 
     images = {
-        "Zipf fit — original scale": "zipf's curve.png",
-        "Zipf fit — log-log scale": "zipf's fit in log space.png",
+        "Zipf fit — original scale": "zipfs_curve.png",
+        "Zipf fit — log-log scale": "zipfs_fit_in_log_space.png",
         "Residuals vs rank": "residuals_vs_rank.png",
         "Cumulative click probability": "cumulative_clicks.png",
-        "Session length distribution": "probability + cumulative distribution of session lengths.png",
+        "Session length distribution": "probability_+_cumulative_distribution_of_session_lengths.png",
     }
 
     selected = st.radio(
@@ -115,7 +115,7 @@ with tab2:
         horizontal=True
     )
 
-    st.image(path.joinpath(images[selected]), use_container_width=True)
+    st.image(path.joinpath(images[selected]))
 
     with st.expander("Model-level conclusions"):
         st.markdown("""
@@ -156,12 +156,19 @@ with tab3:
         - Top number of topics K = 4
         - Model quality plateaus quickly and for larger K improvements are modest
     - **Embedding-based clustering**:
-        - Good separation
+        - Good separation: Peak K ~ 5-7 (depending on seed), cosine silhouette ~ 0.45
         - More consistent structure
         - Item-click 32 dimensional embeddings form small well separated clusters in space.
     """)
 
-    st.markdown("### LDA")
+    st.markdown("### Visual comparison")
+
+    images = {
+        "TF-IDF  performance": "tf-idf.png",
+        "Word2Vec contxt pooling performance": "word2vec.png",
+        "LDA performance": None
+    }
+
     lda_logs = pd.DataFrame({
         "K": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
         "perplexity": [4.991, 4.919, 4.952, 4.930, 4.947, 4.971, 4.967, 4.967, 4.997, 5.000, 5.062, 5.076],
@@ -169,7 +176,6 @@ with tab3:
     
     })
     best = lda_logs.loc[lda_logs["perplexity"].idxmin()]
-    st.info(f"Best LDA configuration: **K = {int(best['K'])}**, "    f"perplexity = **{best['perplexity']:.3f}**, "    f"log-likelihood = **{best['log_likelihood']:.0f}**")
     col1, col2 = st.columns(2)
     fig, ax = plt.subplots(1, 2, figsize=(12, 4)) 
     with col1:    
@@ -186,29 +192,27 @@ with tab3:
         ax[1].set_ylabel("Log-Likelihood")
         ax[1].set_yscale("log")
         ax[1].grid(True, alpha=0.3)
-    st.pyplot(fig)
-
-    st.markdown(""" 
-    - Topics align strongly with **product categories**
-    - Sessions reflect **coherent browsing intent**
-    - Similar product groups appear within the same session
-    - Price ranges and categories are consistent within topics
-    """)
-    st.markdown("### Visual comparison")
-
-    images = {
-        "TF-IDF clustering performance": "tf-idf.png",
-        "Word2Vec pooling clustering performance": "word2vec.png",
-        "LDA topics (top-10 items)": "lda_analysis.png",
-    }
+    fig.tight_layout()
 
     selected = st.radio(
         "Select method",
         list(images.keys()),
         horizontal=True
     )
+    if selected == "LDA performance":
+        st.pyplot(fig, use_container_width=False)
+    else:
+        st.image(path.joinpath(images[selected]))
 
-    st.image(path.joinpath(images[selected]))
+    st.markdown("### LDA")
+    st.info(f"Best LDA configuration: **K = {int(best['K'])}**, "    f"perplexity = **{best['perplexity']:.3f}**, "    f"log-likelihood = **{best['log_likelihood']:.0f}**")
+    st.image(path.joinpath("lda_analysis.png"))
+    st.markdown(""" 
+    - Topics align strongly with **product categories**
+    - Sessions reflect **coherent browsing intent**
+    - Similar product groups appear within the same session
+    - Price ranges and categories are consistent within topics
+    """)
 
     with st.expander("Summary"):
         st.markdown("""
@@ -228,3 +232,119 @@ with tab3:
 
         Session behavior is better captured through **semantic representations**, not sparse frequency features.
         """)
+    with tab4:
+        st.markdown("## Event-Level Cluster Profiling")
+        st.info(
+            "This section profiles the resulting event-level clusters using product range, "
+            "price behavior, colours, categories, and item-level distributions.  "
+            "Clusters are formed using K-Means, according to the best model selection and feature experiments."
+        )
+
+        event_path = path / "event_level"
+
+        images = {
+            "Cluster size": "cluster_size.png",
+            "Product range": "product_range.png",
+            "Price profiling": "price_profiling.png",
+            "Average depth & photography preference": "depth_photo.png",
+            "Top colours": "top_colors.png",
+            "Top items": "top_items.png",
+            "Main categories": "categories.png",
+        }
+
+        selected = st.radio(
+            "Select cluster analysis figure",
+            list(images.keys()),
+            horizontal=True,
+            key="event_cluster_analysis"
+        )
+
+        st.image(event_path / images[selected])
+
+        st.markdown("### Summary")
+
+        st.markdown("""
+        Event-level clustering primarily groups items based on **click frequency patterns** and **feature similarity**, rather than capturing user intent or session behavior.
+
+        - Clusters are largely driven by **item popularity**, separating frequently clicked items from less popular ones.
+        - High-volume clusters tend to contain **top-performing or highly exposed products**.
+        - Lower-volume clusters group **long-tail or niche items** with similar feature representations.
+        - Feature similarity (e.g., category, price, attributes) further refines grouping within similar popularity levels.
+        - The model captures **structural patterns in item interactions**.
+        - Clusters reflect **which items behave similarly in terms of clicks**, not why users clicked them.
+        - “Exploration vs intent” is **not directly encoded** at this level.
+                    
+        Raw event-level clustering in particular was done by Artioli et al. "A comprehensive investigation of clustering algorithms for user and entity behavior analytics", as well as paper by Datta et al. “Real-time threat detection in ueba using unsupervised learning algorithms”.
+        """)
+
+    with tab5:
+        st.markdown("## Cluster Analysis Word2Vec")
+
+        st.info(
+            "This section profiles session-level clusters built from Word2Vec embeddings. "
+            "Unlike raw event-level clustering, these clusters are based on contextual co-occurrence between products within sessions."
+        )
+
+        session_path = path / "session_level"
+
+        images = {
+            "Projected context embeddings": "context_embeddings.png",
+            "Projected click embeddings": "click_embeddings.png",
+            "Cluster size": "clicks_session_counts.png",
+            "Average depth & photography preference": "avg_depth_photo.png",
+            "Price profiling": "prices.png",
+            "Top colours": "top_colors.png",
+            "Top products": "top_products.png",
+        }
+
+        selected = st.radio(
+            "Select Word2Vec cluster analysis figure",
+            list(images.keys()),
+            horizontal=True,
+            key="word2vec_cluster_analysis"
+        )
+
+        st.image(session_path / images[selected])
+
+        st.markdown("### Main interpretation")
+
+        st.markdown("""
+        Session-level clustering based on Word2Vec embeddings captures **co-occurrence structure**
+        and **contextual similarity between products**, rather than only global click frequency.
+
+        - The embedding space reflects products that appear in similar session contexts.
+        - Clusters represent groups of sessions with similar browsing context.
+        - Product, colour, price, and depth profiles help explain what each cluster contains.
+        - Popularity effects may still exist, but they are less dominant than in raw event-level clustering.
+        """)
+
+        st.markdown("### Relation to LDA")
+
+        st.markdown("""
+        Represented clusters show strong parallels with **Latent Dirichlet Allocation (LDA)** results.
+
+        - Both approaches rely on **co-occurrence patterns within sessions**:
+            - LDA models sessions as mixtures of latent topics
+            - Word2Vec embeddings capture similar structure through local context windows
+        - Clusters derived from embeddings often align with **topic-like groupings** observed in LDA driven by product category
+        - In practice, Word2Vec can be seen as a **continuous, geometry-based analogue of topic modeling**
+
+        This explains why both methods highlight similar product groupings and browsing patterns (top products),
+        even though they are based on different mathematical formulations.
+                    
+        Resulting clusters are suitable for session-based recommendation, contextual product analysis, and understanding latent browsing patterns.           
+        """)
+
+        st.markdown("### Appendix — Recommender sanity check 80-20 split")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**No filtering (double interactions)**")
+            st.metric("Recall@10", "0.456")
+            st.metric("NDCG@10", "0.221")
+
+        with col2:
+            st.markdown("**Filtered (strict)**")
+            st.metric("Recall@10", "0.328")
+            st.metric("NDCG@10", "0.162")
