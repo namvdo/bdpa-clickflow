@@ -225,7 +225,7 @@ pip install -r requirements.txt
 ### 5. Run the Streamlit app
 
 ```bash
-streamlit run app/main.py
+streamlit run app/0_Overview.py
 ```
 
 ---
