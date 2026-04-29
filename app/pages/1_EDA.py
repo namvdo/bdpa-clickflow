@@ -17,6 +17,7 @@ ACCENT = "#5b7fbd"
 
 output_dir = Path(__file__).parent.parent.parent / "output"
 cleaned_path = output_dir / "cleaned.parquet"
+path = Path(__file__).parent / 'figures'
 
 if not cleaned_path.exists():
     st.write("Pipeline output not found. Run the scripts in pipeline/ first.")
@@ -641,6 +642,61 @@ unique_products_chart = (
 )
 
 st.altair_chart(unique_products_chart, use_container_width=True)
+
+st.divider()
+st.subheader("Frequential Analysis")
+
+st.info(
+    "The click distribution is highly skewed: a small number of products receive most clicks, while most products receive very few."
+)
+
+col1, col2, col3, col4 = st.columns(4)
+
+col1.metric("Zipf R²", "0.923")
+col2.metric("Alpha", "0.95")
+col3.metric("50% of click volume", "48 items")
+col4.metric("90% sessions", "< 30 clicks")
+
+st.markdown("### Main conclusions")
+
+st.markdown("""
+- Product clicks approximately follow a **Zipf-like distribution**.
+- The fitted Zipf model explains the ranking trend well, with **R² ≈ 0.92**.
+- The tail of the distribution deviates from the Zipf estimate, meaning rare products are less stable/noisier.
+- Around **48 products account for 50% of all clicks**, showing strong concentration.
+- Session lengths are short: **90% of sessions contain fewer than 30 clicks**.
+""")
+
+st.markdown("### Visual analysis")
+
+images = {
+    "Zipf fit — original scale": "zipfs_curve.png",
+    "Zipf fit — log-log scale": "zipfs_fit_in_log_space.png",
+    "Residuals vs rank": "residuals_vs_rank.png",
+    "Cumulative click probability": "cumulative_clicks.png",
+    "Session length distribution": "probability_+_cumulative_distribution_of_session_lengths.png",
+}
+
+selected = st.radio(
+    "Select figure",
+    list(images.keys()),
+    horizontal=True
+)
+
+st.image(path.joinpath(images[selected]))
+
+with st.expander("Summary"):
+    st.markdown("""
+    The frequency distribution confirms that user attention is concentrated on a limited set of products.
+    The Zipf model fits the overall trend well, especially in the middle ranks.
+
+    However, the residual plot shows stronger deviations at the tail, where very low-frequency products
+    are harder to estimate accurately. This suggests that rare products contribute noise and may need
+    filtering, grouping, or separate treatment.
+
+    The session length distribution shows that most sessions are short. Since **90% of sessions are below
+    30 clicks**, session-level models should account for short interaction histories.
+    """)
 
 
 # =========================

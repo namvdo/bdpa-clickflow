@@ -2,75 +2,17 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-st.title("User-Entity Behavior modeling")
-st.write("This page provides an overview on event- and session-level clustering experiments, results, and performance indicators. Along with some complementary analyses.")
+st.title("User-Entity Behavior Modeling")
+st.write("This page provides an overview on Event- and Session-level clustering experiments, results, and performance indicators. Along with some complementary analyses.")
 from pathlib import Path
 path = Path(__file__).parent / 'figures'
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "Frequential analysis",
-    "Event-Level experiments",
-    "Session-Level experiments",
-    "Event-level Cluster Analysis",
-    "Session-level Cluster Analysis"
+tab2, tab3, tab4, tab5 = st.tabs([
+    "Event-Level Experiments",
+    "Session-Level Experiments",
+    "Event-Level Cluster Analysis",
+    "Session-Level Cluster Analysis"
 ])
-
-
-with tab1:
-    st.markdown("## Frequential Analysis")
-
-    st.info(
-        "The click distribution is highly skewed: a small number of products receive most clicks, "
-        "while most products receive very few."
-    )
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    col1.metric("Zipf R²", "0.923")
-    col2.metric("Alpha", "0.95")
-    col3.metric("50% of click volume", "48 items")
-    col4.metric("90% sessions", "< 30 clicks")
-
-    st.markdown("### Main conclusions")
-
-    st.markdown("""
-    - Product clicks approximately follow a **Zipf-like distribution**.
-    - The fitted Zipf model explains the ranking trend well, with **R² ≈ 0.92**.
-    - The tail of the distribution deviates from the Zipf estimate, meaning rare products are less stable/noisier.
-    - Around **48 products account for 50% of all clicks**, showing strong concentration.
-    - Session lengths are short: **90% of sessions contain fewer than 30 clicks**.
-    """)
-
-    st.markdown("### Visual analysis")
-
-    images = {
-        "Zipf fit — original scale": "zipfs_curve.png",
-        "Zipf fit — log-log scale": "zipfs_fit_in_log_space.png",
-        "Residuals vs rank": "residuals_vs_rank.png",
-        "Cumulative click probability": "cumulative_clicks.png",
-        "Session length distribution": "probability_+_cumulative_distribution_of_session_lengths.png",
-    }
-
-    selected = st.radio(
-        "Select figure",
-        list(images.keys()),
-        horizontal=True
-    )
-
-    st.image(path.joinpath(images[selected]))
-
-    with st.expander("Summary"):
-        st.markdown("""
-        The frequency distribution confirms that user attention is concentrated on a limited set of products.
-        The Zipf model fits the overall trend well, especially in the middle ranks.
-
-        However, the residual plot shows stronger deviations at the tail, where very low-frequency products
-        are harder to estimate accurately. This suggests that rare products contribute noise and may need
-        filtering, grouping, or separate treatment.
-
-        The session length distribution shows that most sessions are short. Since **90% of sessions are below
-        30 clicks**, session-level models should account for short interaction histories.
-        """)
 
 with tab2:
     st.markdown("## Event-Level Clustering")
@@ -131,7 +73,7 @@ with tab2:
         - Generally worse and less stable than standard K-Means.
         - Becomes less competitive when K increases.
 
-        ### GMM
+        ### Gaussian Mixture Model (GMM)
         - Poor performance across experiments.
         - Low or negative silhouette scores.
         - High Davies–Bouldin values suggest overlapping clusters.
@@ -151,6 +93,9 @@ with tab3:
     st.markdown("### Main conclusions")
 
     st.markdown("""
+    - There are as much unique click feature combinations as there are items (217 items, 218 combinations)
+    - Country excluded
+    - 218 tokens
     - **TF-IDF (normalized) + K-Means**: poor clustering metrics, no meaningful structure at interpretable number of clusters.
     - **Latent Dirichlet Allocation (LDA)**: 
         - Top number of topics K = 4
@@ -164,8 +109,8 @@ with tab3:
     st.markdown("### Visual comparison")
 
     images = {
-        "TF-IDF  performance": "tf-idf.png",
-        "Word2Vec contxt pooling performance": "word2vec.png",
+        "TF-IDF performance": "tf-idf.png",
+        "Word2Vec context pooling performance": "word2vec.png",
         "LDA performance": None
     }
 
@@ -273,12 +218,13 @@ with tab3:
         - The model captures **structural patterns in item interactions**.
         - Clusters reflect **which items behave similarly in terms of clicks**, not why users clicked them.
         - “Exploration vs intent” is **not directly encoded** at this level.
+        - Top country in all clusters is Poland (quite obviously)
                     
-        Raw event-level clustering in particular was done by Artioli et al. "A comprehensive investigation of clustering algorithms for user and entity behavior analytics", as well as paper by Datta et al. “Real-time threat detection in ueba using unsupervised learning algorithms”.
+        Similar raw event-level clustering in particular was done by Artioli et al. "A comprehensive investigation of clustering algorithms for user and entity behavior analytics", as well as paper by Datta et al. “Real-time threat detection in ueba using unsupervised learning algorithms”.
         """)
 
     with tab5:
-        st.markdown("## Cluster Analysis Word2Vec")
+        st.markdown("## Session-Level Cluster Profiling (Word2Vec)")
 
         st.info(
             "This section profiles session-level clusters built from Word2Vec embeddings. "
@@ -306,7 +252,7 @@ with tab3:
 
         st.image(session_path / images[selected])
 
-        st.markdown("### Main interpretation")
+        st.markdown("### Summary")
 
         st.markdown("""
         Session-level clustering based on Word2Vec embeddings captures **co-occurrence structure**
@@ -335,7 +281,7 @@ with tab3:
         Resulting clusters are suitable for session-based recommendation, contextual product analysis, and understanding latent browsing patterns.           
         """)
 
-        st.markdown("### Appendix — Recommender sanity check 80-20 split")
+        st.markdown("### Bonus - Recommender sanity check with 80-20 split stratified by session lengths")
 
         col1, col2 = st.columns(2)
 
