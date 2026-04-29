@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-st.title("ML")
+st.title("User-Entity Behavior Analytics")
 st.write("This pages provides an overview on event- and session-level clustering experiments, results, and performance indicators. Along with some complementary analyses.")
 from pathlib import Path
 path = Path(__file__).parent / 'figures'
@@ -186,7 +186,7 @@ with tab3:
         ax[1].set_ylabel("Log-Likelihood")
         ax[1].set_yscale("log")
         ax[1].grid(True, alpha=0.3)
-    st.pyplot(fig, use_container_width=True)
+    st.pyplot(fig)
 
     st.markdown(""" 
     - Topics align strongly with **product categories**
