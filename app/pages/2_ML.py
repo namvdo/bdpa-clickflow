@@ -57,7 +57,7 @@ with tab1:
         horizontal=True
     )
 
-    st.image(path.joinpath(images[selected]), use_container_width=True)
+    st.image(path.joinpath(images[selected]))
 
     with st.expander("Summary"):
         st.markdown("""
@@ -199,7 +199,7 @@ with tab3:
     images = {
         "TF-IDF clustering performance": "tf-idf.png",
         "Word2Vec pooling clustering performance": "word2vec.png",
-        "LDA topics": "lda_analysis.png",
+        "LDA topics (top-10 items)": "lda_analysis.png",
     }
 
     selected = st.radio(
@@ -208,14 +208,13 @@ with tab3:
         horizontal=True
     )
 
-    st.image(path.joinpath(images[selected]), use_container_width=True)
+    st.image(path.joinpath(images[selected]))
 
     with st.expander("Summary"):
         st.markdown("""
         **TF-IDF + K-Means clustering**
         - Used normalized sparse vectors with cosine-based evaluation.
-        - Represents sessions based on **product occurrence frequencies**.
-        - Captures co-occurrence of products **within sessions**.
+        - Captures co-occurrence of products within sessions.
         - Performance yields approx. 0.09 cosine silhouette only at K = 20.
 
         **LDA**
