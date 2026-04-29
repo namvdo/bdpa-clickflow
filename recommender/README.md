@@ -17,23 +17,26 @@ Next-click recommender on the 165k-row e-shop clickstream. Three models, all eva
 
 ## Results (top-10)
 
+Improvement is measured relative to the popularity baseline:
+`(model score - popularity score) / popularity score`. The value in parentheses is the actual numeric change from the baseline; coverage change is shown in percentage points.
+
 **Warm sessions (n=15,664):**
 
-| Metric    | Popularity | Item k-NN  | ALS        |
-| :-------- | :--------- | :--------- | :--------- |
-| NDCG@10   | 0.0512     | 0.1105     | **0.1110** |
-| MRR@10    | 0.0360     | **0.0793** | 0.0775     |
-| Recall@10 | 0.1027     | 0.2138     | **0.2221** |
-| Coverage  | 23.04%     | **98.16%** | 97.70%     |
+| Metric    | Popularity | Item k-NN | Improvement vs popularity | ALS | Improvement vs popularity |
+| :-------- | :--------- | :-------- | :------------------------ | :-- | :------------------------ |
+| NDCG@10   | 0.0512     | 0.1105    | +115.8% (+0.0593)         | **0.1110** | **+116.8% (+0.0598)** |
+| MRR@10    | 0.0360     | **0.0793** | **+120.3% (+0.0433)**    | 0.0775 | +115.3% (+0.0415) |
+| Recall@10 | 0.1027     | 0.2138    | +108.2% (+0.1111)         | **0.2221** | **+116.3% (+0.1194)** |
+| Coverage  | 23.04%     | **98.16%** | **+326.0% (+75.12 pp)**  | 97.70% | +324.0% (+74.66 pp) |
 
-ALS and item k-NN are basically tied. Both roughly double the baseline on every ranking metric. With 91% of (session, item) pairs at click count one, the ALS confidence weight collapses to "viewed or not", which is essentially what cosine similarity in k-NN already captures.
+ALS and item k-NN are basically tied. ALS has the largest warm-session NDCG@10 and Recall@10 lift, while item k-NN slightly leads on MRR@10 and coverage. With 91% of (session, item) pairs at click count one, the ALS confidence weight collapses to "viewed or not", which is essentially what cosine similarity in k-NN already captures.
 
 **Cold sessions (n=3,320):**
 
-| Metric    | Popularity | Item-sim fallback | $\Delta$ |
-| :-------- | :--------- | :---------------- | :------- |
-| NDCG@10   | 0.0807     | **0.1903**        | +136%    |
-| Recall@10 | 0.1623     | **0.3434**        | +112%    |
-| Coverage  | 5.07%      | **98.16%**        | +93.1 pp |
+| Metric    | Popularity | Item-sim fallback | Improvement vs popularity |
+| :-------- | :--------- | :---------------- | :------------------------ |
+| NDCG@10   | 0.0807     | **0.1903**        | **+135.8% (+0.1096)**     |
+| Recall@10 | 0.1623     | **0.3434**        | **+111.6% (+0.1811)**     |
+| Coverage  | 5.07%      | **98.16%**        | **+1,836.1% (+93.09 pp)** |
 
 The cold fallback is the largest jump in the system. The single observed item is a clean seed for the lookup, and the matrix already encodes that signal from warm sessions — no extra training needed.
