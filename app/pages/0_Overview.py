@@ -12,7 +12,7 @@ st.set_page_config(
 
 ACCENT = "#5b7fbd"
 
-output_dir = Path(__file__).parent.parent / "output"
+output_dir = Path(__file__).parent.parent.parent / "output"
 cleaned_path = output_dir / "cleaned.parquet"
 sessions_path = output_dir / "sessions.parquet"
 
