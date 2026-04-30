@@ -18,8 +18,7 @@ with tab2:
     st.markdown("## Event-Level Clustering")
 
     st.success(
-        "Best configuration: **Experiment 2 — no temporal features**, "
-        "**K-Means**, **K = 8**, **15 PCA components**."
+        "Best configuration - **Experiment 2**"
     )
 
     col1, col2, col3 = st.columns(3)
@@ -46,9 +45,9 @@ with tab2:
     st.markdown("### Visual comparison")
 
     images = {
-        "Experiment 2 (best) — No temporal features": "output2.png",
-        "Experiment 1 — Linear day encoding": "output1.png",
-        "Experiment 0 — Sin/Cos day encoding + month": "output.png",
+        "Experiment 2 (best) - No temporal features": "output2.png",
+        "Experiment 1 - Linear day encoding": "output1.png",
+        "Experiment 0 - Sin/Cos day encoding + month": "output.png",
     }
 
     selected = st.radio(
