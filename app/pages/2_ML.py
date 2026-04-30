@@ -99,8 +99,8 @@ with tab3:
     - **Latent Dirichlet Allocation (LDA)**: 
         - Top number of topics K = 4
         - Model quality plateaus quickly and for larger K improvements are modest
-    - **Embedding-based clustering**:
-        - Good separation: Peak K ~ 5-7 (depending on seed), cosine silhouette ~ 0.45
+    - **Embedding-based clustering (good window size 3-5)**:
+        - Good separation: Peak K ~ 4-6 (depending on seed), cosine silhouette ~ 0.43
         - More consistent structure
         - Item-click 32 dimensional embeddings form small well separated clusters in space.
     """)
