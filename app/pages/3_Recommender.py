@@ -10,10 +10,21 @@ st.set_page_config(page_title="Recommender Results", layout="wide")
 METRICS_PATH = Path(__file__).parent.parent.parent / "evaluation_metrics" / "recommender_metrics.json"
 
 MODEL_COLORS = {
-    "ALS": "#4c72b0",
     "Popularity baseline": "#2ca02c",
     "Item k-NN": "#ff7f0e",
+    "ALS": "#4c72b0",
     "Sequential warm-up": "#c44e52",
+    "Item2Vec": "#9467bd",
+}
+
+METRIC_ORDER_WARM = ["MRR@10", "Recall@10", "Coverage", "Novelty@10"]
+METRIC_ORDER_COLD = ["MRR@10", "Recall@10", "Coverage", "Novelty@10"]
+
+METRIC_KIND = {
+    "MRR@10": "score",
+    "Recall@10": "score",
+    "Coverage": "coverage",
+    "Novelty@10": "novelty",
 }
 
 
@@ -48,6 +59,18 @@ def fmt_pct_point_delta(value):
     return f"{value:+.2%} pp"
 
 
+def fmt_bits(value):
+    if value is None or pd.isna(value):
+        return "-"
+    return f"{value:.4f} bits"
+
+
+def fmt_bits_delta(value):
+    if value is None or pd.isna(value):
+        return "-"
+    return f"{value:+.4f} bits"
+
+
 def relative_change(value, baseline):
     if value is None or baseline is None or pd.isna(value) or pd.isna(baseline) or baseline == 0:
         return None
@@ -58,6 +81,24 @@ def fmt_improvement(value):
     if value is None or pd.isna(value):
         return "-"
     return f"{value:+.1%}"
+
+
+def fmt_value_by_metric(metric_name, value):
+    kind = METRIC_KIND[metric_name]
+    if kind == "coverage":
+        return fmt_pct(value)
+    if kind == "novelty":
+        return fmt_bits(value)
+    return fmt_score(value)
+
+
+def fmt_delta_by_metric(metric_name, value):
+    kind = METRIC_KIND[metric_name]
+    if kind == "coverage":
+        return fmt_pct_point_delta(value)
+    if kind == "novelty":
+        return fmt_bits_delta(value)
+    return fmt_delta(value)
 
 
 def style_delta_cell(value):
@@ -100,12 +141,19 @@ def build_metric_chart(chart_df, metric_name, model_order):
     metric_max = float(metric_df["Value"].max()) if not metric_df.empty else 1.0
     y_max = max(metric_max * 1.15, 0.05)
 
+    if METRIC_KIND[metric_name] == "coverage":
+        y_title = "Coverage"
+    elif METRIC_KIND[metric_name] == "novelty":
+        y_title = "Bits"
+    else:
+        y_title = "Score"
+
     return (
         alt.Chart(metric_df)
         .mark_bar()
         .encode(
             x=alt.X("Model:N", title=None, sort=model_order, axis=alt.Axis(labelAngle=0, labelLimit=140)),
-            y=alt.Y("Value:Q", title="Score", scale=alt.Scale(domain=[0, y_max])),
+            y=alt.Y("Value:Q", title=y_title, scale=alt.Scale(domain=[0, y_max])),
             color=alt.Color(
                 "Model:N",
                 scale=alt.Scale(
@@ -117,13 +165,63 @@ def build_metric_chart(chart_df, metric_name, model_order):
             tooltip=[
                 "Model",
                 "Metric",
-                alt.Tooltip("Value:Q", format=".4f"),
-                alt.Tooltip("Delta:Q", format="+.4f"),
-                alt.Tooltip("Improvement:Q", format="+.1%"),
+                alt.Tooltip("ValueLabel:N", title="Value"),
+                alt.Tooltip("DeltaLabel:N", title="Change vs Baseline"),
+                alt.Tooltip("ImprovementLabel:N", title="Relative Improvement"),
             ],
         )
         .properties(title=metric_name, height=320)
     )
+
+
+def build_chart_df(section_metrics, models, metric_order):
+    baseline = section_metrics["popularity"]
+    rows = []
+    for model_name, key in models:
+        model_metrics = section_metrics[key]
+        for metric in metric_order:
+            value = model_metrics[metric]
+            delta = value - baseline[metric]
+            improvement = 0.0 if key == "popularity" else relative_change(value, baseline[metric])
+            rows.append(
+                {
+                    "Model": model_name,
+                    "Metric": metric,
+                    "Value": value,
+                    "Delta": delta,
+                    "Improvement": improvement,
+                    "ValueLabel": fmt_value_by_metric(metric, value),
+                    "DeltaLabel": fmt_delta_by_metric(metric, delta),
+                    "ImprovementLabel": fmt_improvement(improvement),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def build_table_raw_df(section_metrics, models, metric_order):
+    baseline = section_metrics["popularity"]
+    rows = []
+    for model_name, key in models:
+        model_metrics = section_metrics[key]
+        row = {"Model": model_name}
+        for metric in metric_order:
+            value = model_metrics[metric]
+            row[metric] = value
+            row[f"Delta {metric}"] = value - baseline[metric]
+            row[f"Improvement {metric}"] = 0.0 if key == "popularity" else relative_change(value, baseline[metric])
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def build_table_display_df(table_raw_df, metric_order):
+    cols = {"Model": table_raw_df["Model"]}
+    for metric in metric_order:
+        cols[metric] = table_raw_df[metric].map(lambda v, m=metric: fmt_value_by_metric(m, v))
+        cols[f"Improvement vs Baseline ({metric})"] = table_raw_df[f"Improvement {metric}"].map(fmt_improvement)
+        cols[f"Actual Change ({metric})"] = table_raw_df[f"Delta {metric}"].map(
+            lambda v, m=metric: fmt_delta_by_metric(m, v)
+        )
+    return pd.DataFrame(cols)
 
 
 data = load_recommender_data()
@@ -136,190 +234,54 @@ if not data:
 metrics = data["metrics"]
 warm = metrics["warm_sessions"]
 cold = metrics["cold_sessions"]
-params = data.get("params", {"rank": "N/A", "alpha": "N/A", "regParam": "N/A"})
+params = data.get("params", {})
+als_params = params.get("als", {})
+item2vec_params = params.get("item2vec", {})
+
+warm_models = [
+    ("Popularity baseline", "popularity"),
+    ("Item k-NN", "knn"),
+    ("ALS", "als"),
+    ("Item2Vec", "item2vec"),
+]
+cold_models = [
+    ("Popularity baseline", "popularity"),
+    ("Sequential warm-up", "sequential_warmup"),
+    ("Item2Vec", "item2vec"),
+]
 
 warm_baseline = warm["popularity"]
 cold_baseline = cold["popularity"]
-warm_rank_candidates = {
-    "ALS": warm["als"]["NDCG@10"],
-    "Popularity baseline": warm_baseline["NDCG@10"],
-    "Item k-NN": warm["knn"]["NDCG@10"],
-}
-best_warm_model = max(warm_rank_candidates, key=warm_rank_candidates.get)
 
-warm_chart_df = pd.DataFrame(
-    [
-        {"Model": "Popularity baseline", "Metric": "NDCG@10", "Value": warm_baseline["NDCG@10"], "Delta": 0.0},
-        {"Model": "ALS", "Metric": "NDCG@10", "Value": warm["als"]["NDCG@10"], "Delta": warm["als"]["NDCG@10"] - warm_baseline["NDCG@10"]},
-        {"Model": "Item k-NN", "Metric": "NDCG@10", "Value": warm["knn"]["NDCG@10"], "Delta": warm["knn"]["NDCG@10"] - warm_baseline["NDCG@10"]},
-        {"Model": "Popularity baseline", "Metric": "Recall@10", "Value": warm_baseline["Recall@10"], "Delta": 0.0},
-        {"Model": "ALS", "Metric": "Recall@10", "Value": warm["als"]["Recall@10"], "Delta": warm["als"]["Recall@10"] - warm_baseline["Recall@10"]},
-        {"Model": "Item k-NN", "Metric": "Recall@10", "Value": warm["knn"]["Recall@10"], "Delta": warm["knn"]["Recall@10"] - warm_baseline["Recall@10"]},
-        {"Model": "Popularity baseline", "Metric": "MRR@10", "Value": warm_baseline["MRR@10"], "Delta": 0.0},
-        {"Model": "ALS", "Metric": "MRR@10", "Value": warm["als"]["MRR@10"], "Delta": warm["als"]["MRR@10"] - warm_baseline["MRR@10"]},
-        {"Model": "Item k-NN", "Metric": "MRR@10", "Value": warm["knn"]["MRR@10"], "Delta": warm["knn"]["MRR@10"] - warm_baseline["MRR@10"]},
-        {"Model": "Popularity baseline", "Metric": "Coverage", "Value": warm_baseline["Coverage"], "Delta": 0.0},
-        {"Model": "ALS", "Metric": "Coverage", "Value": warm["als"]["Coverage"], "Delta": warm["als"]["Coverage"] - warm_baseline["Coverage"]},
-        {"Model": "Item k-NN", "Metric": "Coverage", "Value": warm["knn"]["Coverage"], "Delta": warm["knn"]["Coverage"] - warm_baseline["Coverage"]},
-    ]
-)
-warm_chart_df["Improvement"] = warm_chart_df.apply(
-    lambda row: relative_change(row["Value"], warm_baseline[row["Metric"]]),
-    axis=1,
-)
+warm_chart_df = build_chart_df(warm, warm_models, METRIC_ORDER_WARM)
+cold_chart_df = build_chart_df(cold, cold_models, METRIC_ORDER_COLD)
 
-warm_table_raw_df = pd.DataFrame(
-    [
-        {
-            "Model": "Popularity baseline",
-            "NDCG@10": warm_baseline["NDCG@10"],
-            "Delta NDCG@10": 0.0,
-            "Recall@10": warm_baseline["Recall@10"],
-            "Delta Recall@10": 0.0,
-            "MRR@10": warm_baseline["MRR@10"],
-            "Delta MRR@10": 0.0,
-            "Coverage": warm_baseline["Coverage"],
-            "Delta Coverage": 0.0,
-        },
-        {
-            "Model": "Item k-NN",
-            "NDCG@10": warm["knn"]["NDCG@10"],
-            "Delta NDCG@10": warm["knn"]["NDCG@10"] - warm_baseline["NDCG@10"],
-            "Recall@10": warm["knn"]["Recall@10"],
-            "Delta Recall@10": warm["knn"]["Recall@10"] - warm_baseline["Recall@10"],
-            "MRR@10": warm["knn"]["MRR@10"],
-            "Delta MRR@10": warm["knn"]["MRR@10"] - warm_baseline["MRR@10"],
-            "Coverage": warm["knn"]["Coverage"],
-            "Delta Coverage": warm["knn"]["Coverage"] - warm_baseline["Coverage"],
-        },
-        {
-            "Model": "ALS",
-            "NDCG@10": warm["als"]["NDCG@10"],
-            "Delta NDCG@10": warm["als"]["NDCG@10"] - warm_baseline["NDCG@10"],
-            "Recall@10": warm["als"]["Recall@10"],
-            "Delta Recall@10": warm["als"]["Recall@10"] - warm_baseline["Recall@10"],
-            "MRR@10": warm["als"]["MRR@10"],
-            "Delta MRR@10": warm["als"]["MRR@10"] - warm_baseline["MRR@10"],
-            "Coverage": warm["als"]["Coverage"],
-            "Delta Coverage": warm["als"]["Coverage"] - warm_baseline["Coverage"],
-        },
-    ]
-)
-for metric_name in ["NDCG@10", "Recall@10", "MRR@10", "Coverage"]:
-    warm_table_raw_df[f"Improvement {metric_name}"] = warm_table_raw_df[metric_name].map(
-        lambda value, metric=metric_name: relative_change(value, warm_baseline[metric])
-    )
+warm_table_raw_df = build_table_raw_df(warm, warm_models, METRIC_ORDER_WARM)
+cold_table_raw_df = build_table_raw_df(cold, cold_models, METRIC_ORDER_COLD)
 
-warm_table_df = pd.DataFrame(
-    {
-        "Model": warm_table_raw_df["Model"],
-        "NDCG@10": warm_table_raw_df["NDCG@10"].map(fmt_score),
-        "Improvement vs Baseline (NDCG@10)": warm_table_raw_df["Improvement NDCG@10"].map(fmt_improvement),
-        "Actual Change (NDCG@10)": warm_table_raw_df["Delta NDCG@10"].map(fmt_delta),
-        "Recall@10": warm_table_raw_df["Recall@10"].map(fmt_score),
-        "Improvement vs Baseline (Recall@10)": warm_table_raw_df["Improvement Recall@10"].map(fmt_improvement),
-        "Actual Change (Recall@10)": warm_table_raw_df["Delta Recall@10"].map(fmt_delta),
-        "MRR@10": warm_table_raw_df["MRR@10"].map(fmt_score),
-        "Improvement vs Baseline (MRR@10)": warm_table_raw_df["Improvement MRR@10"].map(fmt_improvement),
-        "Actual Change (MRR@10)": warm_table_raw_df["Delta MRR@10"].map(fmt_delta),
-        "Coverage": warm_table_raw_df["Coverage"].map(fmt_pct),
-        "Improvement vs Baseline (Coverage)": warm_table_raw_df["Improvement Coverage"].map(fmt_improvement),
-        "Actual Change (Coverage)": warm_table_raw_df["Delta Coverage"].map(fmt_pct_point_delta),
-    }
-)
+warm_table_df = build_table_display_df(warm_table_raw_df, METRIC_ORDER_WARM)
+cold_table_df = build_table_display_df(cold_table_raw_df, METRIC_ORDER_COLD)
 
-cold_chart_df = pd.DataFrame(
-    [
-        {"Model": "Popularity baseline", "Metric": "NDCG@10", "Value": cold_baseline["NDCG@10"], "Delta": 0.0},
-        {"Model": "Sequential warm-up", "Metric": "NDCG@10", "Value": cold["sequential_warmup"]["NDCG@10"], "Delta": cold["sequential_warmup"]["NDCG@10"] - cold_baseline["NDCG@10"]},
-        {"Model": "Popularity baseline", "Metric": "Recall@10", "Value": cold_baseline["Recall@10"], "Delta": 0.0},
-        {"Model": "Sequential warm-up", "Metric": "Recall@10", "Value": cold["sequential_warmup"]["Recall@10"], "Delta": cold["sequential_warmup"]["Recall@10"] - cold_baseline["Recall@10"]},
-        {"Model": "Popularity baseline", "Metric": "Coverage", "Value": cold_baseline["Coverage"], "Delta": 0.0},
-        {"Model": "Sequential warm-up", "Metric": "Coverage", "Value": cold["sequential_warmup"]["Coverage"], "Delta": cold["sequential_warmup"]["Coverage"] - cold_baseline["Coverage"]},
-    ]
-)
-cold_chart_df["Improvement"] = cold_chart_df.apply(
-    lambda row: relative_change(row["Value"], cold_baseline[row["Metric"]]),
-    axis=1,
-)
+warm_delta_cols = {f"Improvement vs Baseline ({m})": f"Improvement {m}" for m in METRIC_ORDER_WARM}
+cold_delta_cols = {f"Improvement vs Baseline ({m})": f"Improvement {m}" for m in METRIC_ORDER_COLD}
 
-cold_table_raw_df = pd.DataFrame(
-    [
-        {
-            "Model": "Popularity baseline",
-            "NDCG@10": cold_baseline["NDCG@10"],
-            "Delta NDCG@10": 0.0,
-            "Recall@10": cold_baseline["Recall@10"],
-            "Delta Recall@10": 0.0,
-            "Coverage": cold_baseline["Coverage"],
-            "Delta Coverage": 0.0,
-        },
-        {
-            "Model": "Sequential warm-up",
-            "NDCG@10": cold["sequential_warmup"]["NDCG@10"],
-            "Delta NDCG@10": cold["sequential_warmup"]["NDCG@10"] - cold_baseline["NDCG@10"],
-            "Recall@10": cold["sequential_warmup"]["Recall@10"],
-            "Delta Recall@10": cold["sequential_warmup"]["Recall@10"] - cold_baseline["Recall@10"],
-            "Coverage": cold["sequential_warmup"]["Coverage"],
-            "Delta Coverage": cold["sequential_warmup"]["Coverage"] - cold_baseline["Coverage"],
-        },
-    ]
+warm_styler = build_styled_table(warm_table_df, warm_table_raw_df, warm_delta_cols)
+cold_styler = build_styled_table(cold_table_df, cold_table_raw_df, cold_delta_cols)
+
+best_warm_mrr_model = max(
+    [("ALS", warm["als"]["MRR@10"]), ("Item k-NN", warm["knn"]["MRR@10"]), ("Item2Vec", warm["item2vec"]["MRR@10"])],
+    key=lambda x: x[1],
 )
-for metric_name in ["NDCG@10", "Recall@10", "Coverage"]:
-    cold_table_raw_df[f"Improvement {metric_name}"] = cold_table_raw_df[metric_name].map(
-        lambda value, metric=metric_name: relative_change(value, cold_baseline[metric])
-    )
-
-cold_table_df = pd.DataFrame(
-    {
-        "Model": cold_table_raw_df["Model"],
-        "NDCG@10": cold_table_raw_df["NDCG@10"].map(fmt_score),
-        "Improvement vs Baseline (NDCG@10)": cold_table_raw_df["Improvement NDCG@10"].map(fmt_improvement),
-        "Actual Change (NDCG@10)": cold_table_raw_df["Delta NDCG@10"].map(fmt_delta),
-        "Recall@10": cold_table_raw_df["Recall@10"].map(fmt_score),
-        "Improvement vs Baseline (Recall@10)": cold_table_raw_df["Improvement Recall@10"].map(fmt_improvement),
-        "Actual Change (Recall@10)": cold_table_raw_df["Delta Recall@10"].map(fmt_delta),
-        "Coverage": cold_table_raw_df["Coverage"].map(fmt_pct),
-        "Improvement vs Baseline (Coverage)": cold_table_raw_df["Improvement Coverage"].map(fmt_improvement),
-        "Actual Change (Coverage)": cold_table_raw_df["Delta Coverage"].map(fmt_pct_point_delta),
-    }
+best_warm_novelty_model = max(
+    [("ALS", warm["als"]["Novelty@10"]), ("Item k-NN", warm["knn"]["Novelty@10"]), ("Item2Vec", warm["item2vec"]["Novelty@10"])],
+    key=lambda x: x[1],
 )
-
-warm_styler = build_styled_table(
-    warm_table_df,
-    warm_table_raw_df,
-    {
-        "Improvement vs Baseline (NDCG@10)": "Improvement NDCG@10",
-        "Improvement vs Baseline (Recall@10)": "Improvement Recall@10",
-        "Improvement vs Baseline (MRR@10)": "Improvement MRR@10",
-        "Improvement vs Baseline (Coverage)": "Improvement Coverage",
-    },
-)
-
-cold_styler = build_styled_table(
-    cold_table_df,
-    cold_table_raw_df,
-    {
-        "Improvement vs Baseline (NDCG@10)": "Improvement NDCG@10",
-        "Improvement vs Baseline (Recall@10)": "Improvement Recall@10",
-        "Improvement vs Baseline (Coverage)": "Improvement Coverage",
-    },
-)
-
-als_ndcg_delta = warm["als"]["NDCG@10"] - warm_baseline["NDCG@10"]
-als_recall_delta = warm["als"]["Recall@10"] - warm_baseline["Recall@10"]
-knn_ndcg_delta = warm["knn"]["NDCG@10"] - warm_baseline["NDCG@10"]
-knn_recall_delta = warm["knn"]["Recall@10"] - warm_baseline["Recall@10"]
-
-seq_ndcg_delta = cold["sequential_warmup"]["NDCG@10"] - cold_baseline["NDCG@10"]
-seq_recall_delta = cold["sequential_warmup"]["Recall@10"] - cold_baseline["Recall@10"]
-seq_coverage_delta = cold["sequential_warmup"]["Coverage"] - cold_baseline["Coverage"]
 
 st.title("Recommender Analysis")
 st.markdown(
     """
-This page compares the recommender models in two settings:
-**warm sessions** with multiple observed clicks, and **cold-start sessions** with the sequential fix.
+This page compares recommender models in two settings:
+**warm sessions** with multiple observed clicks and **cold-start sessions** with one observed click.
 """
 )
 
@@ -328,95 +290,83 @@ warm_tab, cold_tab = st.tabs(["Warm Sessions", "Cold-Start Sessions"])
 with warm_tab:
     st.markdown(
         f"""
-For sessions with multiple interactions, **{best_warm_model}** is the strongest ranking model here on
-**NDCG@10 = {warm_rank_candidates[best_warm_model]:.4f}**.
-The chart below compares **ALS**, **Popularity baseline**, and **Item k-NN** across all warm-session metrics.
+For warm sessions, **{best_warm_mrr_model[0]}** has the strongest **MRR@10 ({best_warm_mrr_model[1]:.4f})**.
+For personalization depth, **{best_warm_novelty_model[0]}** has the highest **Novelty@10 ({best_warm_novelty_model[1]:.4f} bits)**.
 """
     )
 
     warm_summary_cols = st.columns(3)
     warm_summary_cols[0].metric(
-        "ALS NDCG@10 improvement",
-        fmt_improvement(relative_change(warm["als"]["NDCG@10"], warm_baseline["NDCG@10"])),
-        f"{fmt_delta(als_ndcg_delta)} score change",
-    )
-    warm_summary_cols[1].metric(
         "ALS Recall@10 improvement",
         fmt_improvement(relative_change(warm["als"]["Recall@10"], warm_baseline["Recall@10"])),
-        f"{fmt_delta(als_recall_delta)} score change",
+        fmt_delta(warm["als"]["Recall@10"] - warm_baseline["Recall@10"]),
+    )
+    warm_summary_cols[1].metric(
+        "Item k-NN MRR@10 improvement",
+        fmt_improvement(relative_change(warm["knn"]["MRR@10"], warm_baseline["MRR@10"])),
+        fmt_delta(warm["knn"]["MRR@10"] - warm_baseline["MRR@10"]),
     )
     warm_summary_cols[2].metric(
-        "Item k-NN NDCG@10 improvement",
-        fmt_improvement(relative_change(warm["knn"]["NDCG@10"], warm_baseline["NDCG@10"])),
-        f"{fmt_delta(knn_ndcg_delta)} score change",
+        "Item2Vec Novelty@10 improvement",
+        fmt_improvement(relative_change(warm["item2vec"]["Novelty@10"], warm_baseline["Novelty@10"])),
+        fmt_bits_delta(warm["item2vec"]["Novelty@10"] - warm_baseline["Novelty@10"]),
     )
-    st.caption("Improvement is relative to the popularity baseline; score change is the actual numeric delta.")
+    st.caption("Improvements are relative to the popularity baseline.")
 
-    warm_metric_order = ["NDCG@10", "Recall@10", "MRR@10", "Coverage"]
-    warm_columns = st.columns(len(warm_metric_order))
-    for metric_name, column in zip(warm_metric_order, warm_columns):
+    warm_columns = st.columns(len(METRIC_ORDER_WARM))
+    warm_model_order = [name for name, _ in warm_models]
+    for metric_name, column in zip(METRIC_ORDER_WARM, warm_columns):
         with column:
             st.altair_chart(
-                build_metric_chart(warm_chart_df, metric_name, ["Popularity baseline", "Item k-NN", "ALS"]),
+                build_metric_chart(warm_chart_df, metric_name, warm_model_order),
                 width="stretch",
             )
-
-    st.markdown(
-        f"""
-- **ALS** improves the warm-session baseline on **NDCG@10** by **{fmt_improvement(relative_change(warm["als"]["NDCG@10"], warm_baseline["NDCG@10"]))}** (**{fmt_delta(als_ndcg_delta)}** score change) and on **Recall@10** by **{fmt_improvement(relative_change(warm["als"]["Recall@10"], warm_baseline["Recall@10"]))}** (**{fmt_delta(als_recall_delta)}** score change).
-- **Item k-NN** currently has **{warm["knn"]["Coverage"]:.2%} coverage** with a **{fmt_improvement(relative_change(warm["knn"]["NDCG@10"], warm_baseline["NDCG@10"]))}** NDCG@10 improvement (**{fmt_delta(knn_ndcg_delta)}** score change) and **{fmt_improvement(relative_change(warm["knn"]["Recall@10"], warm_baseline["Recall@10"]))}** Recall@10 improvement (**{fmt_delta(knn_recall_delta)}** score change) vs the warm-session baseline.
-"""
-    )
 
     st.subheader("Warm-Session Metrics Table")
     st.dataframe(warm_styler, width="stretch", hide_index=True)
 
 with cold_tab:
+    seq_cov_delta = cold["sequential_warmup"]["Coverage"] - cold_baseline["Coverage"]
     st.markdown(
         f"""
-For cold-start sessions, the sequential fallback is mainly valuable for **coverage**:
-it reaches **{cold["sequential_warmup"]["Coverage"]:.2%}**, a **{fmt_improvement(relative_change(cold["sequential_warmup"]["Coverage"], cold_baseline["Coverage"]))}** improvement vs the popularity baseline (**{fmt_pct_point_delta(seq_coverage_delta)}** change).
+For cold sessions, **Sequential warm-up** is strongest on ranking quality (**MRR@10={cold["sequential_warmup"]["MRR@10"]:.4f}**),
+while **Item2Vec** gives full catalogue coverage (**{cold["item2vec"]["Coverage"]:.2%}**).
 """
     )
 
     cold_summary_cols = st.columns(3)
     cold_summary_cols[0].metric(
-        "Sequential NDCG@10 improvement",
-        fmt_improvement(relative_change(cold["sequential_warmup"]["NDCG@10"], cold_baseline["NDCG@10"])),
-        f"{fmt_delta(seq_ndcg_delta)} score change",
+        "Sequential MRR@10 improvement",
+        fmt_improvement(relative_change(cold["sequential_warmup"]["MRR@10"], cold_baseline["MRR@10"])),
+        fmt_delta(cold["sequential_warmup"]["MRR@10"] - cold_baseline["MRR@10"]),
     )
     cold_summary_cols[1].metric(
         "Sequential Recall@10 improvement",
         fmt_improvement(relative_change(cold["sequential_warmup"]["Recall@10"], cold_baseline["Recall@10"])),
-        f"{fmt_delta(seq_recall_delta)} score change",
+        fmt_delta(cold["sequential_warmup"]["Recall@10"] - cold_baseline["Recall@10"]),
     )
     cold_summary_cols[2].metric(
         "Sequential coverage improvement",
         fmt_improvement(relative_change(cold["sequential_warmup"]["Coverage"], cold_baseline["Coverage"])),
-        f"{fmt_pct_point_delta(seq_coverage_delta)} change",
+        fmt_pct_point_delta(seq_cov_delta),
     )
-    st.caption("Improvement is relative to the popularity baseline; coverage change is shown in percentage points.")
+    st.caption("Improvements are relative to the popularity baseline.")
 
-    cold_metric_order = ["NDCG@10", "Recall@10", "Coverage"]
-    cold_columns = st.columns(len(cold_metric_order))
-    for metric_name, column in zip(cold_metric_order, cold_columns):
+    cold_columns = st.columns(len(METRIC_ORDER_COLD))
+    cold_model_order = [name for name, _ in cold_models]
+    for metric_name, column in zip(METRIC_ORDER_COLD, cold_columns):
         with column:
             st.altair_chart(
-                build_metric_chart(cold_chart_df, metric_name, ["Popularity baseline", "Sequential warm-up"]),
+                build_metric_chart(cold_chart_df, metric_name, cold_model_order),
                 width="stretch",
             )
-
-    st.markdown(
-        f"""
-- **Sequential warm-up** improves **NDCG@10** by **{fmt_improvement(relative_change(cold["sequential_warmup"]["NDCG@10"], cold_baseline["NDCG@10"]))}** (**{fmt_delta(seq_ndcg_delta)}** score change) and **Recall@10** by **{fmt_improvement(relative_change(cold["sequential_warmup"]["Recall@10"], cold_baseline["Recall@10"]))}** (**{fmt_delta(seq_recall_delta)}** score change) vs the cold-start baseline.
-- The biggest gain is in **coverage**, moving from **{cold_baseline["Coverage"]:.2%}** to **{cold["sequential_warmup"]["Coverage"]:.2%}**.
-"""
-    )
 
     st.subheader("Cold-Start Metrics Table")
     st.dataframe(cold_styler, width="stretch", hide_index=True)
 
 st.caption(
-    f"Model parameters: rank={params['rank']}, alpha={params['alpha']}, regParam={params['regParam']}. "
-    "Evaluation performed with a leave-one-out next-item split (last click per session held out)."
+    f"ALS params: rank={als_params.get('rank', 'N/A')}, alpha={als_params.get('alpha', 'N/A')}, regParam={als_params.get('regParam', 'N/A')}. "
+    f"Item2Vec params: vectorSize={item2vec_params.get('vectorSize', 'N/A')}, windowSize={item2vec_params.get('windowSize', 'N/A')}, "
+    f"maxIter={item2vec_params.get('maxIter', 'N/A')}, minCount={item2vec_params.get('minCount', 'N/A')}. "
+    "Evaluation uses a leave-last-out next-item split."
 )
