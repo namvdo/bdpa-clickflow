@@ -165,12 +165,6 @@ sessions = (
 st.title("Exploratory Data Analysis")
 st.caption("Clickstream-Based User Behavior Analytics")
 
-st.markdown("""
-    This page follows the same EDA flow as the project presentation:
-    region activity, category popularity, product popularity, colour preference,
-    price behavior, session depth, and category association rules.
-    """)
-
 # =========================
 # 1. Region-based activity
 # =========================
