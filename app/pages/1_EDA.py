@@ -590,43 +590,175 @@ st.info(
 st.divider()
 st.header("8. Category associations: suggesting recommender systems")
 
-st.subheader("For Poland: blouses → trousers")
+st.markdown("""
+    Here, each session is treated as a basket of viewed product categories.
+    Association rules help us understand which categories are commonly viewed together.
+    """)
 
+# Unique category basket per session
 category_basket = clicks[["session_id", "region", "category_name"]].drop_duplicates()
 
-poland_basket = category_basket[category_basket["region"] == "Poland"]
+# =========================
+# Build category association rules
+# =========================
 
-num_poland_sessions = poland_basket["session_id"].nunique()
+category_pairs = []
 
-blouse_sessions = set(
-    poland_basket.loc[poland_basket["category_name"] == "blouses", "session_id"]
-)
+for (region, session_id), group in category_basket.groupby(["region", "session_id"]):
+    categories = sorted(group["category_name"].unique())
 
-trouser_sessions = set(
-    poland_basket.loc[poland_basket["category_name"] == "trousers", "session_id"]
-)
+    for i in range(len(categories)):
+        for j in range(len(categories)):
+            if i != j:
+                category_pairs.append(
+                    {
+                        "region": region,
+                        "session_id": session_id,
+                        "antecedent": categories[i],
+                        "consequent": categories[j],
+                    }
+                )
 
-both_sessions = blouse_sessions.intersection(trouser_sessions)
+category_pairs_df = pd.DataFrame(category_pairs)
 
-support = len(both_sessions) / num_poland_sessions
-confidence = len(both_sessions) / len(blouse_sessions)
-lift = confidence / (len(trouser_sessions) / num_poland_sessions)
+if category_pairs_df.empty:
+    st.warning("No category pairs found.")
+else:
+    # Count pair sessions
+    pair_counts = (
+        category_pairs_df.groupby(["region", "antecedent", "consequent"])
+        .agg(pair_sessions=("session_id", "nunique"))
+        .reset_index()
+    )
 
-c1, c2, c3 = st.columns(3)
-c1.metric("Support", f"{support:.4f}")
-c2.metric("Confidence", f"{confidence:.4f}")
-c3.metric("Lift", f"{lift:.4f}")
+    # Count total sessions per region
+    region_session_counts = (
+        category_basket.groupby("region")
+        .agg(num_sessions=("session_id", "nunique"))
+        .reset_index()
+    )
 
-st.markdown(f"""
-    - **Support**: how often both appear together  
-      **{support:.2%}** of Polish sessions contain both.
+    # Count sessions containing each category
+    category_session_counts = (
+        category_basket.groupby(["region", "category_name"])
+        .agg(category_sessions=("session_id", "nunique"))
+        .reset_index()
+    )
 
-    - **Confidence**: how often trousers appear when blouses appear  
-      **{confidence:.2%}** of blouse sessions also contain trousers.
+    # Join counts for antecedent
+    rules_df = pair_counts.merge(region_session_counts, on="region", how="left")
 
-    - **Lift**: strength beyond random co-occurrence  
-      **{lift:.2f}×** more likely than expected by chance.
-    """)
+    rules_df = rules_df.merge(
+        category_session_counts.rename(
+            columns={
+                "category_name": "antecedent",
+                "category_sessions": "antecedent_sessions",
+            }
+        ),
+        on=["region", "antecedent"],
+        how="left",
+    )
+
+    # Join counts for consequent
+    rules_df = rules_df.merge(
+        category_session_counts.rename(
+            columns={
+                "category_name": "consequent",
+                "category_sessions": "consequent_sessions",
+            }
+        ),
+        on=["region", "consequent"],
+        how="left",
+    )
+
+    # Calculate support, confidence, lift
+    rules_df["support"] = rules_df["pair_sessions"] / rules_df["num_sessions"]
+
+    rules_df["confidence"] = rules_df["pair_sessions"] / rules_df["antecedent_sessions"]
+
+    rules_df["consequent_probability"] = (
+        rules_df["consequent_sessions"] / rules_df["num_sessions"]
+    )
+
+    rules_df["lift"] = rules_df["confidence"] / rules_df["consequent_probability"]
+
+    rules_df["rule"] = rules_df["antecedent"] + " → " + rules_df["consequent"]
+
+    # =========================
+    # Main selected rule: Poland, blouses → trousers
+    # =========================
+
+    selected_rule = rules_df[
+        (rules_df["region"] == "Poland")
+        & (rules_df["antecedent"] == "blouses")
+        & (rules_df["consequent"] == "trousers")
+    ].iloc[0]
+
+    st.subheader("Main example rule for Poland: blouses → trousers")
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Support", f"{selected_rule['support']:.4f}")
+    c2.metric("Confidence", f"{selected_rule['confidence']:.4f}")
+    c3.metric("Lift", f"{selected_rule['lift']:.4f}")
+
+    st.markdown(f"""
+        - **Support**: how often both appear together  
+          **{selected_rule["support"]:.2%}** of Polish sessions contain both.
+
+        - **Confidence**: how often trousers appear when blouses appear  
+          **{selected_rule["confidence"]:.2%}** of blouse sessions also contain trousers.
+
+        - **Lift**: strength beyond random co-occurrence  
+          **{selected_rule["lift"]:.2f}×** more likely than expected by chance.
+        """)
+
+    # =========================
+    # Table of other extracted category rules
+    # =========================
+
+    st.subheader("Other extracted category association rules")
+
+    selected_region_for_rules = st.selectbox(
+        "Select region for association rules",
+        sorted(rules_df["region"].unique()),
+        index=(
+            sorted(rules_df["region"].unique()).index("Poland")
+            if "Poland" in sorted(rules_df["region"].unique())
+            else 0
+        ),
+        key="category_rule_region",
+    )
+
+    display_rules = (
+        rules_df[rules_df["region"] == selected_region_for_rules]
+        .sort_values(["support", "lift"], ascending=[False, False])
+        .copy()
+    )
+
+    display_rules = display_rules[
+        [
+            "rule",
+            "pair_sessions",
+            "support",
+            "confidence",
+            "lift",
+        ]
+    ]
+
+    display_rules["support"] = display_rules["support"].round(4)
+    display_rules["confidence"] = display_rules["confidence"].round(4)
+    display_rules["lift"] = display_rules["lift"].round(4)
+
+    st.dataframe(
+        display_rules,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.info(
+        "Support shows how common the pair is, confidence shows how often the consequent appears "
+        "when the antecedent appears, and lift shows whether the co-occurrence is stronger than random chance."
+    )
 
 st.success(
     "EDA takeaway: region, category, product popularity, colour, price, and early-session behavior "
