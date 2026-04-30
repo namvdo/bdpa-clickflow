@@ -247,7 +247,6 @@ warm_models = [
 cold_models = [
     ("Popularity baseline", "popularity"),
     ("Sequential warm-up", "sequential_warmup"),
-    ("Item2Vec", "item2vec"),
 ]
 
 warm_baseline = warm["popularity"]
@@ -329,8 +328,8 @@ with cold_tab:
     seq_cov_delta = cold["sequential_warmup"]["Coverage"] - cold_baseline["Coverage"]
     st.markdown(
         f"""
-For cold sessions, **Sequential warm-up** is strongest on ranking quality (**MRR@10={cold["sequential_warmup"]["MRR@10"]:.4f}**),
-while **Item2Vec** gives full catalogue coverage (**{cold["item2vec"]["Coverage"]:.2%}**).
+For cold sessions, **Sequential warm-up** is the dedicated cold-start model in this comparison
+and reaches **MRR@10={cold["sequential_warmup"]["MRR@10"]:.4f}**.
 """
     )
 

@@ -6,7 +6,7 @@ Next-click recommender on the 165k-row e-shop clickstream. Four models are evalu
 
 - **Split**: hold the last click of each session as ground truth; train on the rest.
 - **Warm sessions** (15,664, at least 2 training clicks): scored by ALS, item k-NN, and Item2Vec.
-- **Cold sessions** (3,320, exactly 1 training click): scored by the item-similarity fallback and Item2Vec from the single observed click.
+- **Cold sessions** (3,320, exactly 1 training click): scored by the item-similarity fallback.
 - **Baseline**: popularity ranker, using the top-10 most-clicked training items after removing already-seen items.
 
 ## Models
@@ -14,7 +14,7 @@ Next-click recommender on the 165k-row e-shop clickstream. Four models are evalu
 - **Popularity**: global item popularity from the training split.
 - **ALS** (Spark MLlib, implicit feedback): rank=20, lambda=1.0, alpha=80.
 - **Item k-NN** (Sarwar et al., co-interaction): cosine similarity over l2-normalised item columns of the session-item matrix, top-50 neighbours per seed. Score for a candidate item is the weighted sum of similarities to items in the user's history.
-- **Item2Vec / Word2Vec**: Spark Word2Vec with vectorSize=32, windowSize=3, maxIter=20, minCount=1. It learns item embeddings from local product context inside ordered sessions. Recommendations average the embeddings of the products clicked so far, then rank candidate products by cosine similarity to that session vector.
+- **Item2Vec / Word2Vec**: Spark Word2Vec with vectorSize=32, windowSize=3, maxIter=20, minCount=1. It learns item embeddings from local product context inside ordered sessions. Recommendations average the embeddings of the products clicked so far, then rank candidate products by cosine similarity to that session vector (used for warm-session evaluation).
 - **Cold fallback**: same k-NN matrix, restricted to the single seed item.
 
 ## Metrics
@@ -41,11 +41,11 @@ ALS and item k-NN remain the strongest accuracy models, but Item2Vec gives the h
 
 **Cold sessions (n=3,320):**
 
-| Metric | Popularity | Item-sim fallback | Improvement | Item2Vec | Improvement |
-| :-- | --: | --: | --: | --: | --: |
-| MRR@10 | 0.0561 | **0.1437** | **+156.1% (+0.0876)** | 0.1104 | +96.8% (+0.0543) |
-| Recall@10 | 0.1623 | **0.3434** | **+111.6% (+0.1811)** | 0.3310 | +103.9% (+0.1687) |
-| Coverage | 5.07% | 98.16% | +93.09 pp | **100.00%** | **+94.93 pp** |
-| Novelty@10 | 6.0038 | 7.1905 | +1.1867 bits | **7.3400** | **+1.3362 bits** |
+| Metric | Popularity | Item-sim fallback | Improvement |
+| :-- | --: | --: | --: |
+| MRR@10 | 0.0561 | **0.1437** | **+156.1% (+0.0876)** |
+| Recall@10 | 0.1623 | **0.3434** | **+111.6% (+0.1811)** |
+| Coverage | 5.07% | **98.16%** | **+93.09 pp** |
+| Novelty@10 | 6.0038 | **7.1905** | **+1.1867 bits** |
 
-The item-similarity fallback is still best on cold-session accuracy, while Item2Vec is close on recall and leads on novelty/coverage. For one-click sessions, both non-popularity models turn the observed item into a useful seed instead of defaulting to globally popular products.
+For one-click sessions, the item-similarity fallback turns the observed item into a strong seed instead of defaulting to globally popular products.
