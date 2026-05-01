@@ -1,6 +1,7 @@
 # Clickstream Recommender
 
 Next-click recommender on the 165k-row e-shop clickstream. Four models are evaluated under a leave-last-out split.
+Next-click recommender on the 165k-row e-shop clickstream. Four models are evaluated under a leave-last-out split.
 
 ## Setup
 
@@ -30,22 +31,22 @@ Improvement is measured relative to the popularity baseline. For coverage, the d
 
 **Warm sessions (n=5,585):**
 
-| Metric | Popularity | Item k-NN | Improvement | ALS | Improvement | Item2Vec | Improvement |
-| :-- | --: | --: | --: | --: | --: | --: | --: |
-| MRR@10 | 0.0415 | 0.0966 | +132.8% (+0.0551) | 0.0867 | +108.9% (+0.0452) | **0.1031** | **+148.4% (+0.0616)** |
-| Recall@10 | 0.1192 | 0.2460 | +106.4% (+0.1268) | 0.2337 | +96.1% (+0.1145) | **0.2858** | **+139.8% (+0.1666)** |
-| Coverage | 22.12% | **98.16%** | **+76.04 pp** | 97.24% | +75.12 pp | **98.16%** | **+76.04 pp** |
-| Novelty@10 | 6.0566 | 7.1585 | +1.1019 bits | 7.3699 | +1.3133 bits | **7.6794** | **+1.6228 bits** |
+| Metric     | Popularity |  Item k-NN |       Improvement |    ALS |       Improvement |   Item2Vec |           Improvement |
+| :--------- | ---------: | ---------: | ----------------: | -----: | ----------------: | ---------: | --------------------: |
+| MRR@10     |     0.0415 |     0.0966 | +132.8% (+0.0551) | 0.0867 | +108.9% (+0.0452) | **0.1031** | **+148.4% (+0.0616)** |
+| Recall@10  |     0.1192 |     0.2460 | +106.4% (+0.1268) | 0.2337 |  +96.1% (+0.1145) | **0.2858** | **+139.8% (+0.1666)** |
+| Coverage   |     22.12% | **98.16%** |     **+76.04 pp** | 97.24% |         +75.12 pp | **98.16%** |         **+76.04 pp** |
+| Novelty@10 |     6.0566 |     7.1585 |      +1.1019 bits | 7.3699 |      +1.3133 bits | **7.6794** |      **+1.6228 bits** |
 
 Item2Vec and item k-NN are the strongest models for both accuracy and personalization. Item2Vec, in particular, provides the highest MRR, recall, and novelty, effectively capturing local sequence context while maintaining high catalogue coverage.
 
 **Cold sessions (n=3,320):**
 
-| Metric | Popularity | Item-sim fallback | Improvement |
-| :-- | --: | --: | --: |
-| MRR@10 | 0.0545 | **0.1450** | **+166.1% (+0.0905)** |
-| Recall@10 | 0.1639 | **0.3434** | **+109.5% (+0.1795)** |
-| Coverage | 5.07% | **98.16%** | **+93.09 pp** |
-| Novelty@10 | 6.0233 | **7.2209** | **+1.1976 bits** |
+| Metric     | Popularity | Item-sim fallback |           Improvement |
+| :--------- | ---------: | ----------------: | --------------------: |
+| MRR@10     |     0.0545 |        **0.1450** | **+166.1% (+0.0905)** |
+| Recall@10  |     0.1639 |        **0.3434** | **+109.5% (+0.1795)** |
+| Coverage   |      5.07% |        **98.16%** |         **+93.09 pp** |
+| Novelty@10 |     6.0233 |        **7.2209** |      **+1.1976 bits** |
 
 For one-click sessions, the item-similarity fallback turns the observed item into a strong seed instead of defaulting to globally popular products.
