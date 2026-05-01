@@ -14,7 +14,7 @@ Next-click recommender on the 165k-row e-shop clickstream. Four models are evalu
 - **Popularity**: global item popularity from the training split.
 - **ALS** (Spark MLlib, implicit feedback): rank=20, lambda=1.0, alpha=80.
 - **Item k-NN** (Sarwar et al., co-interaction): cosine similarity over l2-normalised item columns of the session-item matrix, top-50 neighbours per seed. Score for a candidate item is the weighted sum of similarities to items in the user's history.
-- **Item2Vec / Word2Vec**: Spark Word2Vec with vectorSize=32, windowSize=3, maxIter=20, minCount=1. It learns item embeddings from local product context inside ordered sessions. Recommendations average the embeddings of the products clicked so far, then rank candidate products by cosine similarity to that session vector (used for warm-session evaluation).
+- **Item2Vec / Word2Vec**: Spark Word2Vec with vectorSize=32, windowSize=3, maxIter=20, minCount=1. It learns item embeddings from local product context inside ordered sessions. Recommendations use **exponential weighted pooling** (decay=0.8) to give more importance to recent clicks, then rank candidate products by cosine similarity to that session vector.
 - **Cold fallback**: same k-NN matrix, restricted to the single seed item.
 
 ## Metrics
@@ -28,10 +28,8 @@ Improvement is measured relative to the popularity baseline. For coverage, the d
 
 ## Results
 
-**Warm sessions (n=15,664):**
+**Warm sessions (n=5,585):**
 
-| Metric | Popularity | Item k-NN | Improvement | ALS | Improvement | Item2Vec | Improvement |
-| :-- | --: | --: | --: | --: | --: | --: | --: |
 | Metric | Popularity | Item k-NN | Improvement | ALS | Improvement | Item2Vec | Improvement |
 | :-- | --: | --: | --: | --: | --: | --: | --: |
 | MRR@10 | 0.0415 | 0.0894 | +115.4% (+0.0479) | **0.0867** | +108.9% (+0.0452) | 0.0747 | +80.0% (+0.0332) |
