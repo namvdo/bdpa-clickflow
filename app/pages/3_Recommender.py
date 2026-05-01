@@ -247,6 +247,7 @@ warm_models = [
 cold_models = [
     ("Popularity baseline", "popularity"),
     ("Sequential warm-up", "sequential_warmup"),
+    ("Item2Vec", "item2vec"),
 ]
 
 warm_baseline = warm["popularity"]

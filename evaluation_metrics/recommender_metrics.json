@@ -14,16 +14,16 @@
                 "Novelty@10": 7.3699
             },
             "knn": {
-                "MRR@10": 0.0894,
-                "Recall@10": 0.2312,
+                "MRR@10": 0.0966,
+                "Recall@10": 0.246,
                 "Coverage": 0.9816,
-                "Novelty@10": 7.1015
+                "Novelty@10": 7.1585
             },
             "item2vec": {
-                "MRR@10": 0.0747,
-                "Recall@10": 0.2015,
-                "Coverage": 1.0,
-                "Novelty@10": 7.6799
+                "MRR@10": 0.1031,
+                "Recall@10": 0.2858,
+                "Coverage": 0.9816,
+                "Novelty@10": 7.6794
             }
         },
         "cold_sessions": {
@@ -38,12 +38,6 @@
                 "Recall@10": 0.3434,
                 "Coverage": 0.9816,
                 "Novelty@10": 7.2209
-            },
-            "item2vec": {
-                "MRR@10": 0.1104,
-                "Recall@10": 0.331,
-                "Coverage": 1.0,
-                "Novelty@10": 7.3402
             }
         }
     },
@@ -99,7 +93,7 @@
             "vectorSize": 32,
             "windowSize": 3,
             "maxIter": 20,
-            "minCount": 1
+            "minCount": 5
         }
     }
 }
