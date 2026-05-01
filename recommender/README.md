@@ -4,9 +4,9 @@ Next-click recommender on the 165k-row e-shop clickstream. Four models are evalu
 
 ## Setup
 
-- **Split**: hold the last click of each session as ground truth; train on the rest.
-- **Warm sessions** (15,664, at least 2 training clicks): scored by ALS, item k-NN, and Item2Vec.
-- **Cold sessions** (3,320, exactly 1 training click): scored by the item-similarity fallback.
+- **Split**: a temporal train/test split. Sessions starting before month 7 are for training; sessions starting in month 7 or 8 are for testing. Within the test set, the last click is held out as ground truth.
+- **Warm sessions** (17,031 training, 5,585 evaluable test): scored by ALS (fold-in), item k-NN, and Item2Vec.
+- **Cold sessions** (3,320): scored by the item-similarity fallback.
 - **Baseline**: popularity ranker, using the top-10 most-clicked training items after removing already-seen items.
 
 ## Models
@@ -32,10 +32,12 @@ Improvement is measured relative to the popularity baseline. For coverage, the d
 
 | Metric | Popularity | Item k-NN | Improvement | ALS | Improvement | Item2Vec | Improvement |
 | :-- | --: | --: | --: | --: | --: | --: | --: |
-| MRR@10 | 0.0360 | **0.0793** | **+120.3% (+0.0433)** | 0.0775 | +115.3% (+0.0415) | 0.0665 | +84.7% (+0.0305) |
-| Recall@10 | 0.1027 | 0.2138 | +108.2% (+0.1111) | **0.2221** | **+116.3% (+0.1194)** | 0.1934 | +88.3% (+0.0907) |
-| Coverage | 23.04% | 98.16% | +75.12 pp | 97.70% | +74.66 pp | **100.00%** | **+76.96 pp** |
-| Novelty@10 | 6.0467 | 7.1015 | +1.0548 bits | 7.4114 | +1.3647 bits | **7.6799** | **+1.6332 bits** |
+| Metric | Popularity | Item k-NN | Improvement | ALS | Improvement | Item2Vec | Improvement |
+| :-- | --: | --: | --: | --: | --: | --: | --: |
+| MRR@10 | 0.0415 | 0.0894 | +115.4% (+0.0479) | **0.0867** | +108.9% (+0.0452) | 0.0747 | +80.0% (+0.0332) |
+| Recall@10 | 0.1192 | 0.2312 | +93.9% (+0.1120) | **0.2337** | **+96.1% (+0.1145)** | 0.2015 | +69.0% (+0.0823) |
+| Coverage | 22.12% | 98.16% | +76.04 pp | 97.24% | +75.12 pp | **100.00%** | **+77.88 pp** |
+| Novelty@10 | 6.0566 | 7.1015 | +1.0449 bits | 7.3699 | +1.3133 bits | **7.6799** | **+1.6233 bits** |
 
 ALS and item k-NN remain the strongest accuracy models, but Item2Vec gives the highest novelty and full catalogue coverage while still beating the popularity baseline on MRR and recall. That is the useful signal here: the sequence-aware model is not only re-ranking the head of the catalogue.
 

@@ -367,5 +367,5 @@ st.caption(
     f"ALS params: rank={als_params.get('rank', 'N/A')}, alpha={als_params.get('alpha', 'N/A')}, regParam={als_params.get('regParam', 'N/A')}. "
     f"Item2Vec params: vectorSize={item2vec_params.get('vectorSize', 'N/A')}, windowSize={item2vec_params.get('windowSize', 'N/A')}, "
     f"maxIter={item2vec_params.get('maxIter', 'N/A')}, minCount={item2vec_params.get('minCount', 'N/A')}. "
-    "Evaluation uses a leave-last-out next-item split."
+    "Evaluation uses a temporal train/test split (Train: months < 7, Test: months 7-8) with a leave-last-out next-item holdout."
 )

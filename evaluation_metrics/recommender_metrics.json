@@ -2,98 +2,98 @@
     "metrics": {
         "warm_sessions": {
             "popularity": {
-                "MRR@10": 0.036,
-                "Recall@10": 0.1027,
-                "Coverage": 0.2304,
-                "Novelty@10": 6.0467
+                "MRR@10": 0.0415,
+                "Recall@10": 0.1192,
+                "Coverage": 0.2212,
+                "Novelty@10": 6.0566
             },
             "als": {
-                "MRR@10": 0.0775,
-                "Recall@10": 0.2221,
-                "Coverage": 0.977,
-                "Novelty@10": 7.4114
+                "MRR@10": 0.0867,
+                "Recall@10": 0.2337,
+                "Coverage": 0.9724,
+                "Novelty@10": 7.3699
             },
             "knn": {
-                "MRR@10": 0.0793,
-                "Recall@10": 0.2138,
+                "MRR@10": 0.0894,
+                "Recall@10": 0.2312,
                 "Coverage": 0.9816,
                 "Novelty@10": 7.1015
             },
             "item2vec": {
-                "MRR@10": 0.0665,
-                "Recall@10": 0.1934,
+                "MRR@10": 0.0747,
+                "Recall@10": 0.2015,
                 "Coverage": 1.0,
                 "Novelty@10": 7.6799
             }
         },
         "cold_sessions": {
             "popularity": {
-                "MRR@10": 0.0561,
-                "Recall@10": 0.1623,
+                "MRR@10": 0.0545,
+                "Recall@10": 0.1639,
                 "Coverage": 0.0507,
-                "Novelty@10": 6.0038
+                "Novelty@10": 6.0233
             },
             "sequential_warmup": {
-                "MRR@10": 0.1437,
+                "MRR@10": 0.145,
                 "Recall@10": 0.3434,
                 "Coverage": 0.9816,
-                "Novelty@10": 7.1905
+                "Novelty@10": 7.2209
             },
             "item2vec": {
                 "MRR@10": 0.1104,
                 "Recall@10": 0.331,
                 "Coverage": 1.0,
-                "Novelty@10": 7.34
+                "Novelty@10": 7.3402
             }
         }
     },
     "top_items": [
         {
             "item_id": "B4",
-            "views": 2847
-        },
-        {
-            "item_id": "A2",
-            "views": 2568
-        },
-        {
-            "item_id": "A11",
-            "views": 2349
-        },
-        {
-            "item_id": "P1",
-            "views": 2197
-        },
-        {
-            "item_id": "B10",
-            "views": 2082
-        },
-        {
-            "item_id": "A4",
-            "views": 1994
-        },
-        {
-            "item_id": "A5",
-            "views": 1993
+            "views": 2603
         },
         {
             "item_id": "A15",
-            "views": 1987
+            "views": 1978
         },
         {
-            "item_id": "A1",
-            "views": 1928
+            "item_id": "A4",
+            "views": 1937
+        },
+        {
+            "item_id": "A2",
+            "views": 1903
+        },
+        {
+            "item_id": "A11",
+            "views": 1779
+        },
+        {
+            "item_id": "P1",
+            "views": 1774
+        },
+        {
+            "item_id": "B10",
+            "views": 1751
         },
         {
             "item_id": "A10",
-            "views": 1928
+            "views": 1517
+        },
+        {
+            "item_id": "A5",
+            "views": 1510
+        },
+        {
+            "item_id": "B24",
+            "views": 1463
         }
     ],
     "params": {
         "als": {
             "rank": 20,
             "alpha": 80.0,
-            "regParam": 1.0
+            "regParam": 0.1
         },
         "item2vec": {
             "vectorSize": 32,
