@@ -22,7 +22,7 @@ outside_europe_codes = [1, 4, 5, 6, 20, 26, 40, 42]
 unidentified_codes = [12, 43, 44, 45, 46, 47]
 
 
-def load_data(dir: str):
+def load_data(dir: str, collapse_self_transitions = False):
     return spark.read.csv(dir, header=True, inferSchema=True, sep = ";")
 
 def vectorize(sequences: DataFrame, sequenceCol = "sequence", w2v_path: str = "word2vec_model", return_vocabulary = True, model_only = False):
@@ -61,7 +61,8 @@ def tokenize(raw_df: DataFrame,
             only_tokens = False,
             test = False,
             reserve_gt_clicks_N = 1,
-            tokens_df: DataFrame = None):
+            tokens_df: DataFrame = None,
+            collapse_self_transitions = False):
     '''
     tokenizes clicks ingoring the mentioned colums, by default ignores "year", "month", "day", "country"\n
     returns tokens and original dataframe with "id" column
@@ -74,15 +75,19 @@ def tokenize(raw_df: DataFrame,
     if only_tokens:
        return tokens
     tokenized = raw_df.join(tokens, on = token_features, how="left").drop(*token_features)
+    if collapse_self_transitions:
+        session_w = Window.partitionBy(grouping_col).orderBy(order_col)
+        tokenized = tokenized.withColumn("next", F.lag("id", -1).over(session_w)).dropna()
+        tokenized = tokenized.filter(F.col("id") != F.col("next")).drop("next")
     if build_sequences:
         if test == False:
             w = Window.partitionBy(grouping_col).rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing)
             tokenized = (tokenized
                 .withColumn("sequence", F.collect_list("id").over(w))
-                .filter(F.col("order") == 1)
+                .filter(F.col(order_col) == 1)
                 .drop("id"))
         else:
-            w = Window.partitionBy(grouping_col).orderBy("order")
+            w = Window.partitionBy(grouping_col).orderBy(order_col)
             tokenized = (tokenized
                 .withColumns({"sequence": F.collect_list("id").over(w), "next": F.lag("id", -reserve_gt_clicks_N).over(w)}))
             tokenized = tokenized.drop("id").dropna()
