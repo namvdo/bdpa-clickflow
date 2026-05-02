@@ -122,9 +122,9 @@ Outputs:
 #### Models
 
 - **Popularity**: global item popularity from the training split.
-- **ALS** (Spark MLlib, implicit feedback): rank=20, lambda=1.0, alpha=80.
+- **ALS** (Spark MLlib, implicit feedback): rank=20, lambda=0.1, alpha=80.
 - **Item k-NN** (Sarwar et al., co-interaction): cosine similarity over l2-normalised item columns of the session-item matrix, top-50 neighbours per seed. Score for a candidate item is the weighted sum of similarities to items in the user's history.
-- **Item2Vec / Word2Vec**: Spark Word2Vec with vectorSize=32, windowSize=3, maxIter=20, minCount=1. It learns item embeddings from local product context inside ordered sessions. Recommendations use **exponential weighted pooling** (decay=0.8) to give more importance to recent clicks, then rank candidate products by cosine similarity to that session vector.
+- **Item2Vec / Word2Vec**: Spark Word2Vec with vectorSize=32, windowSize=5, maxIter=20, minCount=5. It learns item embeddings from local product context inside ordered sessions. Recommendations use **exponential weighted pooling** (decay=0.8) to give more importance to recent clicks, then rank candidate products by cosine similarity to that session vector.
 - **Cold fallback**: same k-NN matrix, restricted to the single seed item.
 
 #### Metrics
