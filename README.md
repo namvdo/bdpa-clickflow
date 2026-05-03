@@ -7,9 +7,9 @@
 
 ## How to run
 Project requires PySpark. Notebooks in ML section are using shared scripts in \utils so local installation of project is required. Some additional helpers, including streamlit are included in the package. Easiest to go around with project:
-'''
+```
 pip install .
-'''
+```
 If something doesn't work try installing dependecies from requiremenets.txt.
 
 ## Project Overview
