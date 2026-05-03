@@ -5,6 +5,8 @@ on:
       - report/**
       - "!report/main.pdf"
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build_latex:
     runs-on: ubuntu-latest
