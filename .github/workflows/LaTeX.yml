@@ -14,7 +14,7 @@ jobs:
       - name: GitHub Action for LaTeX
         uses: xu-cheng/latex-action@v4
         with:
-          root_file: Template.tex
+          root_file: main.tex
           working_directory: ./report/
       - name: Upload PDF artifact
         uses: actions/upload-artifact@v4
