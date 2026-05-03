@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - report/**
+      - "!report/main.pdf"
   workflow_dispatch:
 jobs:
   build_latex:
@@ -20,3 +21,10 @@ jobs:
         with:
           name: report-pdf
           path: ./report/main.pdf
+      - name: Commit PDF to repo
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add ./report/main.pdf
+          git commit -m "Add compiled PDF"
+          git push
