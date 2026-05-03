@@ -172,7 +172,7 @@ with tab3:
         **Embeddings (Word2Vec / pooled vectors) + K-Means**
         - Capture semantic similarity between products
         - Produce dense, meaningful representations
-        - Lead to significantly better clustering performance
+        - Lead to significantly better clustering performance 
 
         Session behavior is better captured through **semantic representations**, not sparse frequency features.
         """)
@@ -227,7 +227,7 @@ with tab3:
 
         st.info(
             "This section profiles session-level clusters built from Word2Vec embeddings. "
-            "Unlike raw event-level clustering, these clusters are based on contextual co-occurrence between products within sessions."
+            "Unlike raw event-level clustering, these clusters are based on contextual co-occurrence of click tokens within sessions."
         )
 
         session_path = path / "session_level"
@@ -240,6 +240,7 @@ with tab3:
             "Price profiling": "prices.png",
             "Top colours": "top_colors.png",
             "Top products": "top_products.png",
+            "Top categories": "top_categories.png"
         }
 
         selected = st.radio(
@@ -255,7 +256,7 @@ with tab3:
 
         st.markdown("""
         Session-level clustering based on Word2Vec embeddings captures **co-occurrence structure**
-        and **contextual similarity between products**, rather than only global click frequency.
+        and **contextual similarity between clicks and products**, rather than only global click frequency.
 
         - The embedding space reflects products that appear in similar session contexts.
         - Clusters represent groups of sessions with similar browsing context.
@@ -266,7 +267,7 @@ with tab3:
         st.markdown("### Relation to LDA")
 
         st.markdown("""
-        Represented clusters show strong parallels with **Latent Dirichlet Allocation (LDA)** results.
+        Represented clusters show strong parallels with **Latent Dirichlet Allocation (LDA)** topic modeling results.
 
         - Both approaches rely on **co-occurrence patterns within sessions**:
             - LDA models sessions as mixtures of latent topics
@@ -285,11 +286,11 @@ with tab3:
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("**No filtering (double interactions)**")
-            st.metric("Recall@10", "0.456")
-            st.metric("NDCG@10", "0.221")
+            st.markdown("**No filtering (but double interactions collapsed)**")
+            st.metric("Recall@10", "0.4032")
+            st.metric("NDCG@10", "0.165")
 
         with col2:
-            st.markdown("**Filtered (strict)**")
-            st.metric("Recall@10", "0.328")
-            st.metric("NDCG@10", "0.162")
+            st.markdown("**Last Filtered (stricter)**")
+            st.metric("Recall@10", "0.362")
+            st.metric("NDCG@10", "0.173")

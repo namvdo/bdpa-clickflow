@@ -5,6 +5,13 @@
 
 ---
 
+## How to run
+Project requires PySpark. Notebooks in ML section are using shared scripts in \utils so local installation of project is required. Some additional helpers, including streamlit are included in the package. Easiest to go around with project:
+'''
+pip install .
+'''
+If something doesn't work try installing dependecies from requiremenets.txt.
+
 ## Project Overview
 
 This project analyzes clickstream data from an online clothing store using a Big Data pipeline built on Apache Spark, creating a scalable backbone for potential implementations. We process raw user click logs, engineer session-level features, and apply machine learning to understand and predict user behavior. A recommender system surfaces product suggestions from browsing patterns and a shared Streamlit app presents all findings interactively.
