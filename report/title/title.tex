@@ -1,0 +1,32 @@
+\begin{titlepage}
+\center
+
+
+\includegraphics[scale=0.3]{title/unioulu.png}\\[0cm] % FIX: \\[0] -> \\[0cm]
+
+
+\ifdefined\department
+  \Large \textsc{\department} \\[4cm]
+  \ifdefined\subjectname
+    \large \subjectname\\[1cm]
+  \fi
+
+
+
+  \textsc{{\huge \bfseries \reporttitle}\vspace{1cm}}\\[1.75cm]
+
+
+\ifdefined\authorid
+\authorname\\ % Your name
+\else
+\textsc{Nam Do}\\[0.5cm]
+\textsc{Leo Davidov}\\[0.5cm]
+\textsc{Seyyedhamid Azimidokht}\\[0.5cm]
+\textsc{Sajjad Ghaeminejad}\\[2.25cm]
+\fi
+
+
+  \today
+\fi
+
+\end{titlepage}
