@@ -2,7 +2,7 @@
 
 > Master's course project — Big Data (University of Oulu)
 > Tools: PySpark, Spark MLlib, Docker, Streamlit (webapp)  
-**Project report [LINK](./main.pdf)**
+**Project report [LINK](./report/main.pdf)**
 ---
 
 ## How to run
