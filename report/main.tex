@@ -556,7 +556,7 @@ Novelty@10  & 6.0566     & 7.1585    & 7.3699 & \textbf{7.6881} \\
 \label{warm}
 \end{table}
 
-The results of cold session evaluation runs are presented in the Table \ref{warm}. Item2Vec achieved the best results across all four metrics using the same parameters as Word2Vec in a clustering setup and $\gamma = 0.01$ for EWM formulation, with MRR@10 of 0.1332 (+220.9\% over baseline) and Recall@10 of 0.3522 (+195.4\%). $\gamma = 0.01$ performed the best, showing that in this context, user sessions don't have long-term dependencies, and the future is driven by the last interaction.
+The results of evaluation runs for warm sessions are presented in the Table \ref{warm}. Item2Vec achieved the best results across all four metrics using the same parameters as Word2Vec in a clustering setup and $\gamma = 0.01$ for EWM formulation, with MRR@10 of 0.1332 (+220.9\% over baseline) and Recall@10 of 0.3522 (+195.4\%). $\gamma = 0.01$ performed the best, showing that in this context, user sessions don't have long-term dependencies, and the future is driven by the last interaction.
 Item k-NN ranks second on accuracy and matches Item2Vec on coverage
 (98.16\%), while ALS falls slightly behind both - most sessions contribute
 only one click per item, so raw click counts add little signal beyond
@@ -597,7 +597,7 @@ Novelty@10  & 6.0233     & \textbf{7.2209} \\
 \label{Cold}
 \end{table}
 
-The results of cold session evaluation runs are presented in the Table \ref{Cold}. The sequential warm-up model outperforms the popularity baseline by 166.1\%
+The evaluation result for cold sessions is presented in the Table \ref{Cold}. The sequential warm-up model outperforms the popularity baseline by 166.1\%
 on MRR@10 and 109.5\% on Recall@10.
 The most noticeable difference is in coverage: the popularity baseline
 reaches only 5.07\% of the catalogue because it ignores the single observed
